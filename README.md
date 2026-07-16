@@ -7,7 +7,8 @@ A browser-based tool for creating custom rainfall-accumulation maps across Louis
 - Accepts an inclusive start and end date.
 - Downloads daily NOAA precipitation grids concurrently.
 - Accumulates and reprojects the grids onto a common Louisiana/Mississippi map.
-- Adds state, parish/county, and city references.
+- Adds state, parish/county, and readable city references.
+- Optionally samples the rainfall grid at displayed city locations.
 - Provides state, WFO LIX, metro, southwest Mississippi, and coastal map presets.
 - Exports a publication-ready PNG and a georeferenced GeoTIFF in inches.
 
