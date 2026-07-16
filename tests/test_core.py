@@ -15,7 +15,9 @@ from rainfall.core import (
 
 def test_date_sequence_is_inclusive():
     assert date_sequence(date(2016, 8, 1), date(2016, 8, 3)) == [
-        date(2016, 8, 1), date(2016, 8, 2), date(2016, 8, 3),
+        date(2016, 8, 1),
+        date(2016, 8, 2),
+        date(2016, 8, 3),
     ]
 
 
