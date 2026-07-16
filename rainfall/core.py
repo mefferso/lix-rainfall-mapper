@@ -45,8 +45,8 @@ class TargetGrid:
         return self.west, self.east, self.south, self.north
 
 
-# Bounds are west, south, east, north.  Keep broad state views first, followed
-# by operational/local presets in the order shown in the Streamlit selector.
+# Bounds are west, south, east, north. Broad state views are followed by
+# operational/local presets in the order shown in the Streamlit selector.
 REGIONS: dict[str, tuple[float, float, float, float]] = {
     "Louisiana + Mississippi": (-94.35, 28.70, -88.05, 35.10),
     "Louisiana": (-94.25, 28.70, -88.65, 33.15),
@@ -129,6 +129,8 @@ def _clean_source_array(dataset) -> np.ndarray:
     invalid = ~np.isfinite(raw) | (raw < 0)
     if dataset.nodata is not None and np.isfinite(dataset.nodata):
         invalid |= np.isclose(raw, dataset.nodata)
+    # Replace extreme legacy nodata sentinels before narrowing float64 to
+    # float32; otherwise NumPy correctly warns that the sentinel overflows.
     source = np.where(invalid, 0.0, raw).astype("float32")
     source[invalid] = np.nan
     return source
@@ -152,6 +154,9 @@ def accumulate_rasters(
             with memory_file.open() as dataset:
                 source = _clean_source_array(dataset)
                 daily = np.full_like(total, np.nan)
+                # Older Stage III GeoTIFFs use a custom spherical geographic
+                # CRS. Their coordinates are already longitude/latitude, but
+                # PROJ cannot always derive a WGS84 datum transformation.
                 destination_crs = dataset.crs if dataset.crs.is_geographic else grid.crs
                 reproject(
                     source=source,
@@ -202,9 +207,16 @@ def make_geotiff(data: np.ndarray, grid: TargetGrid) -> bytes:
     encoded = np.where(np.isfinite(data), data, nodata).astype("float32")
     with MemoryFile() as memory_file:
         with memory_file.open(
-            driver="GTiff", height=grid.height, width=grid.width, count=1,
-            dtype="float32", crs=grid.crs, transform=grid.transform,
-            nodata=nodata, compress="deflate", predictor=3,
+            driver="GTiff",
+            height=grid.height,
+            width=grid.width,
+            count=1,
+            dtype="float32",
+            crs=grid.crs,
+            transform=grid.transform,
+            nodata=nodata,
+            compress="deflate",
+            predictor=3,
         ) as dataset:
             dataset.write(encoded, 1)
             dataset.update_tags(
