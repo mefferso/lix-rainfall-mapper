@@ -17,9 +17,20 @@ from .core import TargetGrid
 
 RAIN_LEVELS = [0.01, 0.25, 0.50, 1, 2, 3, 4, 6, 8, 10, 12, 15, 20, 25, 30]
 RAIN_COLORS = [
-    "#eee4bf", "#d8c175", "#f4e663", "#a7e36d", "#48c86c",
-    "#36d6bc", "#43b7e8", "#3d79d8", "#6354c7", "#9c5ad5",
-    "#d555b6", "#ee5c7a", "#d52d39", "#8e1f2e",
+    "#eee4bf",
+    "#d8c175",
+    "#f4e663",
+    "#a7e36d",
+    "#48c86c",
+    "#36d6bc",
+    "#43b7e8",
+    "#3d79d8",
+    "#6354c7",
+    "#9c5ad5",
+    "#d555b6",
+    "#ee5c7a",
+    "#d52d39",
+    "#8e1f2e",
 ]
 
 CITIES = {
@@ -49,6 +60,7 @@ CITIES = {
     "Tupelo": (34.258, -88.704),
 }
 
+
 # County/parish membership for the land portion of the WFO LIX forecast area.
 # Pairing names with state FIPS avoids ambiguity between states.
 LIX_CWA_COUNTIES = {
@@ -65,6 +77,7 @@ LIX_CWA_COUNTIES = {
     ("28", "Jackson"), ("28", "Pearl River"), ("28", "Pike"),
     ("28", "Walthall"), ("28", "Wilkinson"),
 }
+
 
 
 def _rings(geometry: dict):
@@ -132,6 +145,7 @@ def _draw_lix_forecast_area(ax, boundaries: dict) -> None:
         )
 
 
+
 def _format_date(day: date) -> str:
     return f"{day.strftime('%B')} {day.day}, {day.year}"
 
@@ -188,9 +202,15 @@ def render_map(
     fig.patch.set_facecolor("white")
     ax.set_facecolor("#f7f4ed")
 
+    plotted = np.ma.masked_invalid(data)
     image = ax.imshow(
-        np.ma.masked_invalid(data), extent=grid.extent, origin="upper",
-        cmap=cmap, norm=norm, interpolation="bilinear", zorder=1,
+        plotted,
+        extent=grid.extent,
+        origin="upper",
+        cmap=cmap,
+        norm=norm,
+        interpolation="bilinear",
+        zorder=1,
     )
 
     if region_name == "WFO LIX":
@@ -198,46 +218,89 @@ def render_map(
 
     if show_counties:
         _draw_boundaries(
-            ax, boundaries, "county", color="#2d3742", linewidth=0.34,
-            alpha=0.42, zorder=4,
+            ax,
+            boundaries,
+            "county",
+            color="#2d3742",
+            linewidth=0.34,
+            alpha=0.42,
+            zorder=4,
         )
     _draw_boundaries(
-        ax, boundaries, "state", color="white", linewidth=2.5,
-        alpha=0.95, zorder=5,
+        ax,
+        boundaries,
+        "state",
+        color="white",
+        linewidth=2.5,
+        alpha=0.95,
+        zorder=5,
     )
     _draw_boundaries(
-        ax, boundaries, "state", color="#17212b", linewidth=1.05,
-        alpha=1, zorder=6,
+        ax,
+        boundaries,
+        "state",
+        color="#17212b",
+        linewidth=1.05,
+        alpha=1,
+        zorder=6,
     )
 
     if show_cities:
         for name, (latitude, longitude) in CITIES.items():
             if grid.west < longitude < grid.east and grid.south < latitude < grid.north:
                 ax.scatter(
-                    longitude, latitude, s=8, facecolor="white", edgecolor="#17212b",
-                    linewidth=0.55, zorder=7,
+                    longitude,
+                    latitude,
+                    s=8,
+                    facecolor="white",
+                    edgecolor="#17212b",
+                    linewidth=0.55,
+                    zorder=7,
                 )
                 ax.annotate(
-                    name, (longitude, latitude), xytext=(3, 3),
-                    textcoords="offset points", fontsize=6.3, color="#101820",
-                    weight="semibold", path_effects=[], zorder=8,
+                    name,
+                    (longitude, latitude),
+                    xytext=(3, 3),
+                    textcoords="offset points",
+                    fontsize=6.3,
+                    color="#101820",
+                    weight="semibold",
+                    path_effects=[],
+                    zorder=8,
                 )
 
     title = custom_title.strip() or "Observed Rainfall"
     period = _format_date(start) if start == end else f"{_format_date(start)} – {_format_date(end)}"
     ax.set_title(title, loc="left", fontsize=20, weight="bold", color="#13283a", pad=30)
     ax.text(
-        0, 1.014, f"Total multi-sensor precipitation • {period}",
-        transform=ax.transAxes, ha="left", va="bottom", fontsize=10.5,
+        0,
+        1.014,
+        f"Total multi-sensor precipitation • {period}",
+        transform=ax.transAxes,
+        ha="left",
+        va="bottom",
+        fontsize=10.5,
         color="#516170",
     )
 
     if region_name == "WFO LIX":
         ax.text(
-            0.985, 0.025, "WFO LIX forecast area", transform=ax.transAxes,
-            ha="right", va="bottom", fontsize=7.5, weight="semibold",
-            color="#006990", zorder=10,
-            bbox=dict(boxstyle="round,pad=0.35", facecolor="white", edgecolor="#0077a8", alpha=0.9),
+            0.985,
+            0.025,
+            "WFO LIX forecast area",
+            transform=ax.transAxes,
+            ha="right",
+            va="bottom",
+            fontsize=7.5,
+            weight="semibold",
+            color="#006990",
+            zorder=10,
+            bbox=dict(
+                boxstyle="round,pad=0.35",
+                facecolor="white",
+                edgecolor="#0077a8",
+                alpha=0.9,
+            ),
         )
 
     ax.set_xlim(grid.west, grid.east)
@@ -250,26 +313,43 @@ def render_map(
         spine.set_linewidth(0.8)
 
     ax.annotate(
-        "N", xy=(0.955, 0.905), xytext=(0.955, 0.82),
-        xycoords="axes fraction", textcoords="axes fraction",
-        ha="center", va="center", fontsize=8, weight="bold", color="#17212b",
-        arrowprops=dict(arrowstyle="-|>", lw=1.5, color="#17212b"), zorder=9,
+        "N",
+        xy=(0.955, 0.905),
+        xytext=(0.955, 0.82),
+        xycoords="axes fraction",
+        textcoords="axes fraction",
+        ha="center",
+        va="center",
+        fontsize=8,
+        weight="bold",
+        color="#17212b",
+        arrowprops=dict(arrowstyle="-|>", lw=1.5, color="#17212b"),
+        zorder=9,
     )
     _add_scale_bar(ax, grid)
 
     colorbar = fig.colorbar(
-        image, ax=ax, orientation="horizontal", fraction=0.045, pad=0.045,
-        aspect=40, ticks=RAIN_LEVELS, extend="max",
+        image,
+        ax=ax,
+        orientation="horizontal",
+        fraction=0.045,
+        pad=0.045,
+        aspect=40,
+        ticks=RAIN_LEVELS,
+        extend="max",
     )
     colorbar.ax.tick_params(labelsize=7.2, length=2.5, pad=2)
     colorbar.set_label("Rainfall (inches)", fontsize=9.5, weight="semibold", labelpad=7)
     colorbar.outline.set_linewidth(0.6)
 
     fig.text(
-        0.5, 0.018,
-        "Source: NOAA/NWS River Forecast Center multi-sensor precipitation estimates "
-        "• Daily periods valid 12Z–12Z",
-        ha="center", va="bottom", fontsize=7.1, color="#68747f",
+        0.5,
+        0.018,
+        "Source: NOAA/NWS River Forecast Center multi-sensor precipitation estimates • Daily periods valid 12Z–12Z",
+        ha="center",
+        va="bottom",
+        fontsize=7.1,
+        color="#68747f",
     )
     fig.subplots_adjust(left=0.035, right=0.965, top=0.90, bottom=0.105)
 
