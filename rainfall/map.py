@@ -6,6 +6,7 @@ import math
 from datetime import date
 from io import BytesIO
 
+import matplotlib.patheffects as path_effects
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.colors import BoundaryNorm, ListedColormap
@@ -32,30 +33,78 @@ RAIN_COLORS = [
 ]
 
 CITIES = {
-    "Alexandria": (31.312, -92.446),
-    "Baton Rouge": (30.451, -91.187),
-    "Bay St. Louis": (30.309, -89.330),
-    "Biloxi": (30.396, -88.885),
-    "Bogalusa": (30.791, -89.849),
-    "Covington": (30.475, -90.100),
-    "Greenville": (33.411, -91.061),
-    "Gulfport": (30.367, -89.093),
-    "Hammond": (30.504, -90.462),
-    "Hattiesburg": (31.327, -89.290),
-    "Houma": (29.596, -90.720),
-    "Jackson": (32.299, -90.185),
-    "Lafayette": (30.224, -92.020),
-    "Lake Charles": (30.226, -93.217),
-    "McComb": (31.244, -90.453),
-    "Meridian": (32.365, -88.704),
-    "Monroe": (32.510, -92.120),
-    "Morgan City": (29.699, -91.207),
-    "New Orleans": (29.951, -90.072),
-    "Picayune": (30.526, -89.679),
-    "Shreveport": (32.526, -93.750),
-    "Slidell": (30.275, -89.782),
-    "Thibodaux": (29.795, -90.822),
-    "Tupelo": (34.258, -88.704),
+    # The third value is the widest map (longitude span in degrees) on which
+    # the city is shown. This keeps statewide maps readable while adding
+    # more local references to the metro and coastal presets.
+    "Alexandria": (31.312, -92.446, 10.0),
+    "Amite City": (30.727, -90.509, 2.2),
+    "Baton Rouge": (30.451, -91.187, 10.0),
+    "Bay St. Louis": (30.309, -89.330, 4.5),
+    "Belle Chasse": (29.855, -89.991, 2.2),
+    "Biloxi": (30.396, -88.885, 10.0),
+    "Bogalusa": (30.791, -89.849, 4.5),
+    "Brookhaven": (31.579, -90.441, 4.5),
+    "Chalmette": (29.943, -89.963, 2.2),
+    "Columbia": (31.252, -89.838, 4.5),
+    "Covington": (30.475, -90.100, 4.5),
+    "Denham Springs": (30.487, -90.956, 2.2),
+    "Donaldsonville": (30.101, -90.993, 2.2),
+    "Franklinton": (30.847, -90.154, 4.5),
+    "Galliano": (29.442, -90.299, 2.2),
+    "Gonzales": (30.239, -90.920, 4.5),
+    "Grand Isle": (29.237, -89.987, 4.5),
+    "Greenville": (33.411, -91.061, 10.0),
+    "Gulfport": (30.367, -89.093, 10.0),
+    "Hammond": (30.504, -90.462, 4.5),
+    "Hattiesburg": (31.327, -89.290, 10.0),
+    "Houma": (29.596, -90.720, 4.5),
+    "Jackson": (32.299, -90.185, 10.0),
+    "Kenner": (29.994, -90.242, 2.2),
+    "Kentwood": (30.938, -90.509, 2.2),
+    "LaPlace": (30.067, -90.480, 2.2),
+    "Lafayette": (30.224, -92.020, 10.0),
+    "Lake Charles": (30.226, -93.217, 10.0),
+    "Liberty": (31.158, -90.812, 4.5),
+    "Mandeville": (30.358, -90.066, 2.2),
+    "McComb": (31.244, -90.453, 10.0),
+    "Meridian": (32.365, -88.704, 10.0),
+    "Metairie": (29.984, -90.153, 2.2),
+    "Monroe": (32.510, -92.120, 10.0),
+    "Morgan City": (29.699, -91.207, 4.5),
+    "Natchez": (31.560, -91.403, 4.5),
+    "New Orleans": (29.951, -90.072, 10.0),
+    "New Roads": (30.702, -91.436, 2.2),
+    "Ocean Springs": (30.411, -88.828, 2.2),
+    "Pascagoula": (30.366, -88.556, 4.5),
+    "Picayune": (30.526, -89.679, 4.5),
+    "Plaquemine": (30.289, -91.234, 2.2),
+    "Poplarville": (30.840, -89.534, 2.2),
+    "Prairieville": (30.303, -90.972, 2.2),
+    "Raceland": (29.727, -90.598, 2.2),
+    "Shreveport": (32.526, -93.750, 10.0),
+    "Slidell": (30.275, -89.782, 4.5),
+    "St. Francisville": (30.779, -91.377, 2.2),
+    "Thibodaux": (29.795, -90.822, 4.5),
+    "Tupelo": (34.258, -88.704, 10.0),
+    "Tylertown": (31.117, -90.142, 4.5),
+    "Wiggins": (30.858, -89.135, 4.5),
+    "Woodville": (31.105, -91.300, 4.5),
+    "Zachary": (30.649, -91.157, 2.2),
+}
+
+CITY_LABEL_OFFSETS = {
+    "Baton Rouge": (5, 5),
+    "Belle Chasse": (5, -15),
+    "Chalmette": (5, 5),
+    "Covington": (5, 5),
+    "Denham Springs": (5, -15),
+    "Gonzales": (5, 5),
+    "Kenner": (-34, 5),
+    "LaPlace": (-30, 5),
+    "Mandeville": (5, -15),
+    "Metairie": (5, -15),
+    "New Orleans": (5, 5),
+    "Prairieville": (5, -15),
 }
 
 
@@ -78,6 +127,24 @@ def _draw_boundaries(ax, boundaries: dict, layer: str, **style) -> None:
             ax.plot(coordinates[:, 0], coordinates[:, 1], **style)
 
 
+
+
+def _sample_grid(
+    data: np.ndarray,
+    grid: TargetGrid,
+    latitude: float,
+    longitude: float,
+) -> float | None:
+    """Return the nearest valid grid-cell value for a location."""
+
+    if not (grid.west <= longitude <= grid.east and grid.south <= latitude <= grid.north):
+        return None
+    column = int((longitude - grid.west) / (grid.east - grid.west) * grid.width)
+    row = int((grid.north - latitude) / (grid.north - grid.south) * grid.height)
+    column = min(max(column, 0), grid.width - 1)
+    row = min(max(row, 0), grid.height - 1)
+    value = data[row, column]
+    return float(value) if np.isfinite(value) else None
 
 
 def _format_date(day: date) -> str:
@@ -122,6 +189,7 @@ def render_map(
     custom_title: str = "",
     show_counties: bool = True,
     show_cities: bool = True,
+    show_city_samples: bool = False,
     region_name: str = "",
 ) -> bytes:
     """Render a rainfall accumulation map and return PNG bytes."""
@@ -161,17 +229,8 @@ def render_map(
         ax,
         boundaries,
         "state",
-        color="white",
-        linewidth=2.5,
-        alpha=0.95,
-        zorder=5,
-    )
-    _draw_boundaries(
-        ax,
-        boundaries,
-        "state",
         color="#17212b",
-        linewidth=1.30,
+        linewidth=1.75,
         alpha=1,
         zorder=6,
     )
@@ -181,43 +240,45 @@ def render_map(
             ax,
             boundaries,
             "cwa",
-            color="white",
-            linewidth=4.2,
-            alpha=0.95,
-            zorder=7,
-        )
-        _draw_boundaries(
-            ax,
-            boundaries,
-            "cwa",
             color="#111111",
-            linewidth=2.3,
+            linewidth=2.8,
             alpha=1,
             zorder=8,
         )
 
-    if show_cities:
-        for name, (latitude, longitude) in CITIES.items():
+    if show_cities or show_city_samples:
+        longitude_span = grid.east - grid.west
+        for name, (latitude, longitude, maximum_span) in CITIES.items():
+            if longitude_span > maximum_span:
+                continue
             if grid.west < longitude < grid.east and grid.south < latitude < grid.north:
+                label = name
+                if show_city_samples:
+                    sample = _sample_grid(data, grid, latitude, longitude)
+                    if sample is not None:
+                        label = f'{name}\n{sample:.2f}"'
+                offset = CITY_LABEL_OFFSETS.get(name, (5, 5))
                 ax.scatter(
                     longitude,
                     latitude,
-                    s=8,
+                    s=16,
                     facecolor="white",
-                    edgecolor="#17212b",
-                    linewidth=0.55,
-                    zorder=7,
+                    edgecolor="#101820",
+                    linewidth=0.8,
+                    zorder=9,
                 )
                 ax.annotate(
-                    name,
+                    label,
                     (longitude, latitude),
-                    xytext=(3, 3),
+                    xytext=offset,
                     textcoords="offset points",
-                    fontsize=6.3,
+                    fontsize=9.0,
                     color="#101820",
-                    weight="semibold",
-                    path_effects=[],
-                    zorder=8,
+                    weight="bold",
+                    path_effects=[
+                        path_effects.withStroke(linewidth=2.4, foreground="white")
+                    ],
+                    zorder=10,
                 )
 
     title = custom_title.strip() or "Observed Rainfall"
