@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date
+from inspect import signature
 import time
 
 import requests
@@ -178,17 +179,23 @@ if submitted:
         accumulation = accumulate_rasters(raster_payloads, grid, process_progress)
         status_box.caption("Loading parish and county boundaries…")
         boundaries = get_boundaries()
+        render_options = {
+            "custom_title": custom_title,
+            "show_counties": show_counties,
+            "show_cities": show_cities,
+            "region_name": region_name,
+        }
+        # Streamlit can hot-reload app.py while retaining an older imported
+        # rainfall.map module. Keep that transient mismatch from crashing a map.
+        if "show_city_samples" in signature(render_map).parameters:
+            render_options["show_city_samples"] = show_city_samples
         png = render_map(
             accumulation,
             grid,
             boundaries,
             start_date,
             end_date,
-            custom_title=custom_title,
-            show_counties=show_counties,
-            show_cities=show_cities,
-            show_city_samples=show_city_samples,
-            region_name=region_name,
+            **render_options,
         )
         geotiff = make_geotiff(accumulation, grid)
         maximum, latitude, longitude = maximum_location(accumulation, grid)
