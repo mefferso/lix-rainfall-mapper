@@ -182,6 +182,7 @@ if submitted:
             custom_title=custom_title,
             show_counties=show_counties,
             show_cities=show_cities,
+            region_name=region_name,
         )
         geotiff = make_geotiff(accumulation, grid)
         maximum, latitude, longitude = maximum_location(accumulation, grid)
