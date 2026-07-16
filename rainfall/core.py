@@ -45,10 +45,18 @@ class TargetGrid:
         return self.west, self.east, self.south, self.north
 
 
+# Bounds are west, south, east, north. Broad state views are followed by
+# operational/local presets in the order shown in the Streamlit selector.
 REGIONS: dict[str, tuple[float, float, float, float]] = {
     "Louisiana + Mississippi": (-94.35, 28.70, -88.05, 35.10),
     "Louisiana": (-94.25, 28.70, -88.65, 33.15),
     "Mississippi": (-91.80, 29.95, -87.95, 35.10),
+    "WFO LIX": (-91.85, 28.70, -88.55, 31.35),
+    "New Orleans Metro": (-90.75, 29.55, -89.45, 30.50),
+    "Baton Rouge Metro": (-91.65, 30.15, -90.55, 30.85),
+    "Southwest Mississippi": (-91.10, 30.70, -89.45, 31.70),
+    "Coastal Mississippi": (-89.85, 30.15, -88.30, 30.95),
+    "Coastal Louisiana": (-93.95, 28.65, -88.65, 30.75),
 }
 
 STAGE_III_LAST_DATE = date(2017, 6, 27)

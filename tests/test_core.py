@@ -3,6 +3,7 @@ from datetime import date
 import pytest
 
 from rainfall.core import (
+    REGIONS,
     ArchiveSource,
     DateRangeError,
     build_target_grid,
@@ -42,3 +43,34 @@ def test_grid_dimensions_and_extent():
     assert grid.width > 200
     assert grid.height > 200
     assert grid.extent == (-94.35, -88.05, 28.70, 35.10)
+
+
+def test_operational_region_presets_are_available():
+    expected = {
+        "WFO LIX",
+        "New Orleans Metro",
+        "Baton Rouge Metro",
+        "Southwest Mississippi",
+        "Coastal Mississippi",
+        "Coastal Louisiana",
+    }
+    assert expected <= REGIONS.keys()
+
+
+@pytest.mark.parametrize(
+    "region_name",
+    [
+        "WFO LIX",
+        "New Orleans Metro",
+        "Baton Rouge Metro",
+        "Southwest Mississippi",
+        "Coastal Mississippi",
+        "Coastal Louisiana",
+    ],
+)
+def test_operational_region_grids_have_valid_dimensions(region_name):
+    grid = build_target_grid(region_name)
+    assert grid.width > 0
+    assert grid.height > 0
+    assert grid.west < grid.east
+    assert grid.south < grid.north
