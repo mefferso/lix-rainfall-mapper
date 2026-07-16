@@ -144,6 +144,11 @@ with st.sidebar:
         st.markdown("##### Map layers")
         show_counties = st.checkbox("Parish and county boundaries", value=True)
         show_cities = st.checkbox("City labels", value=True)
+        show_city_samples = st.checkbox(
+            "Rainfall samples at cities",
+            value=False,
+            help="Adds the nearest rainfall-grid value beneath each displayed city name.",
+        )
         submitted = st.form_submit_button("Generate rainfall map", type="primary", use_container_width=True)
 
     st.caption("Supported archive: January 1, 2005 through yesterday. Maximum period: 90 days.")
@@ -182,6 +187,7 @@ if submitted:
             custom_title=custom_title,
             show_counties=show_counties,
             show_cities=show_cities,
+            show_city_samples=show_city_samples,
             region_name=region_name,
         )
         geotiff = make_geotiff(accumulation, grid)
