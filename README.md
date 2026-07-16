@@ -22,7 +22,7 @@ The app automatically selects a directly readable daily NOAA GeoTIFF:
 
 These quality-controlled products combine radar and rain-gauge information from NWS River Forecast Centers. Archived daily periods are valid **12Z–12Z**, and both dates selected in the app are included.
 
-State and parish/county overlays come from the U.S. Census Bureau's 2024 cartographic boundary files and are cached by the application.
+State, parish/county, and WFO LIX overlays are derived from official National Weather Service GIS boundary shapefiles and bundled with the application.
 
 ## Run locally
 
@@ -44,7 +44,7 @@ streamlit run app.py
 
 - Total precipitation for periods up to 90 days.
 - Statewide, combined, WFO LIX, metro, southwest Mississippi, and coastal map areas.
-- A highlighted land-area outline on the WFO LIX preset.
+- The official WFO LIX forecast-area outline on the WFO LIX preset.
 - Fixed rainfall color intervals for consistent event-to-event comparison.
 
 Planned additions include rolling maximum 24/48/72-hour totals, gauge overlays, parish/county summaries, and Atlas 14 exceedance comparisons.
