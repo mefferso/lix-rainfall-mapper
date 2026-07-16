@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 import math
-from collections import Counter
 from datetime import date
 from io import BytesIO
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.collections import LineCollection
 from matplotlib.colors import BoundaryNorm, ListedColormap
 
 from .core import TargetGrid
@@ -61,23 +59,6 @@ CITIES = {
 }
 
 
-# County/parish membership for the land portion of the WFO LIX forecast area.
-# Pairing names with state FIPS avoids ambiguity between states.
-LIX_CWA_COUNTIES = {
-    ("22", "Ascension"), ("22", "Assumption"),
-    ("22", "East Baton Rouge"), ("22", "East Feliciana"),
-    ("22", "Iberville"), ("22", "Jefferson"), ("22", "Lafourche"),
-    ("22", "Livingston"), ("22", "Orleans"), ("22", "Plaquemines"),
-    ("22", "Pointe Coupee"), ("22", "St. Bernard"),
-    ("22", "St. Charles"), ("22", "St. Helena"), ("22", "St. James"),
-    ("22", "St. John the Baptist"), ("22", "St. Tammany"),
-    ("22", "Tangipahoa"), ("22", "Terrebonne"), ("22", "Washington"),
-    ("22", "West Baton Rouge"), ("22", "West Feliciana"),
-    ("28", "Amite"), ("28", "Hancock"), ("28", "Harrison"),
-    ("28", "Jackson"), ("28", "Pearl River"), ("28", "Pike"),
-    ("28", "Walthall"), ("28", "Wilkinson"),
-}
-
 
 
 def _rings(geometry: dict):
@@ -96,53 +77,6 @@ def _draw_boundaries(ax, boundaries: dict, layer: str, **style) -> None:
             coordinates = np.asarray(ring)
             ax.plot(coordinates[:, 0], coordinates[:, 1], **style)
 
-
-def _is_lix_county(feature: dict) -> bool:
-    properties = feature["properties"]
-    return (
-        properties.get("layer") == "county"
-        and (properties.get("statefp"), properties.get("name")) in LIX_CWA_COUNTIES
-    )
-
-
-def _draw_lix_forecast_area(ax, boundaries: dict) -> None:
-    """Tint LIX counties/parishes and emphasize only their exterior edge."""
-
-    edges: Counter[tuple[tuple[float, float], tuple[float, float]]] = Counter()
-    original_segments: dict[
-        tuple[tuple[float, float], tuple[float, float]],
-        tuple[tuple[float, float], tuple[float, float]],
-    ] = {}
-
-    for feature in boundaries["features"]:
-        if not _is_lix_county(feature):
-            continue
-        for ring in _rings(feature["geometry"]):
-            coordinates = np.asarray(ring)
-            ax.fill(
-                coordinates[:, 0], coordinates[:, 1],
-                color="#00a6d2", alpha=0.08, zorder=2,
-            )
-            for start, end in zip(coordinates[:-1], coordinates[1:]):
-                a = (round(float(start[0]), 6), round(float(start[1]), 6))
-                b = (round(float(end[0]), 6), round(float(end[1]), 6))
-                key = tuple(sorted((a, b)))
-                edges[key] += 1
-                original_segments[key] = (tuple(start), tuple(end))
-
-    exterior = [original_segments[key] for key, count in edges.items() if count == 1]
-    if exterior:
-        ax.add_collection(
-            LineCollection(
-                exterior,
-                colors="#0077a8",
-                linewidths=2.4,
-                alpha=0.98,
-                zorder=7,
-                capstyle="round",
-                joinstyle="round",
-            )
-        )
 
 
 
@@ -213,17 +147,14 @@ def render_map(
         zorder=1,
     )
 
-    if region_name == "WFO LIX":
-        _draw_lix_forecast_area(ax, boundaries)
-
     if show_counties:
         _draw_boundaries(
             ax,
             boundaries,
             "county",
-            color="#2d3742",
-            linewidth=0.34,
-            alpha=0.42,
+            color="#a5a5a5",
+            linewidth=0.42,
+            alpha=0.85,
             zorder=4,
         )
     _draw_boundaries(
@@ -240,10 +171,30 @@ def render_map(
         boundaries,
         "state",
         color="#17212b",
-        linewidth=1.05,
+        linewidth=1.30,
         alpha=1,
         zorder=6,
     )
+
+    if region_name == "WFO LIX":
+        _draw_boundaries(
+            ax,
+            boundaries,
+            "cwa",
+            color="white",
+            linewidth=4.2,
+            alpha=0.95,
+            zorder=7,
+        )
+        _draw_boundaries(
+            ax,
+            boundaries,
+            "cwa",
+            color="#111111",
+            linewidth=2.3,
+            alpha=1,
+            zorder=8,
+        )
 
     if show_cities:
         for name, (latitude, longitude) in CITIES.items():
@@ -293,12 +244,12 @@ def render_map(
             va="bottom",
             fontsize=7.5,
             weight="semibold",
-            color="#006990",
+            color="#111111",
             zorder=10,
             bbox=dict(
                 boxstyle="round,pad=0.35",
                 facecolor="white",
-                edgecolor="#0077a8",
+                edgecolor="#111111",
                 alpha=0.9,
             ),
         )
