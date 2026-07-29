@@ -24,21 +24,15 @@ ASCENSION_COMPARISON_WINDOWS = {
     (date(2016, 8, 11), date(2016, 8, 14)),
     (date(2016, 8, 12), date(2016, 8, 14)),
 }
-ASCENSION_GAUGE_TOTALS = (
-    # Coordinates verified against the uploaded CoCoRaHS station workbook.
-    # Gauge labels sit below/left or below/right of the shared comparison point.
-    ("Prairieville 2.0 S", 30.276934, -90.979147, 15.02, (-12, -10)),
-    ("Gonzales 0.8 E", 30.217250, -90.909870, 11.41, (12, -10)),
+
+# Each matched station is drawn once with a combined CoCoRaHS/QPE label.
+# Coordinates were verified against the uploaded CoCoRaHS station workbook.
+ASCENSION_COMPARISON_STATIONS = (
+    ("Prairieville 2.0 S", 30.276934, -90.979147, 15.02, (12, 10)),
+    ("Gonzales 0.8 E", 30.217250, -90.909870, 11.41, (12, 10)),
     ("Gonzales 4.5 S", 30.151899, -90.928910, 19.13, (12, -10)),
 )
-ASCENSION_QPE_SAMPLES = (
-    # Sample NOAA QPE at the exact CoCoRaHS station coordinates so each pair
-    # compares the same location. Donaldsonville remains a QPE-only reference.
-    ("Prairieville 2.0 S", 30.276934, -90.979147, (12, 10)),
-    ("Gonzales 0.8 E", 30.217250, -90.909870, (-12, 10)),
-    ("Gonzales 4.5 S", 30.151899, -90.928910, (-12, 10)),
-    ("Donaldsonville", 30.101, -90.993, (8, 8)),
-)
+DONALDSONVILLE_QPE = ("Donaldsonville", 30.101, -90.993, (8, 8))
 
 _RENDER_LOCK = threading.Lock()
 
@@ -82,30 +76,41 @@ def _draw_ascension_boundary(ax, boundaries: dict) -> None:
             )
 
 
-def _draw_simple_location_label(
+def _draw_marker_pair(ax, latitude: float, longitude: float) -> None:
+    """Draw one shared comparison symbol at the matched station location."""
+
+    ax.scatter(
+        longitude,
+        latitude,
+        s=36,
+        marker="o",
+        facecolor="white",
+        edgecolor="#111111",
+        linewidth=0.9,
+        zorder=10,
+    )
+    ax.scatter(
+        longitude,
+        latitude,
+        s=14,
+        marker="s",
+        facecolor="#111111",
+        edgecolor="#111111",
+        linewidth=0.8,
+        zorder=11,
+    )
+
+
+def _draw_label_only(
     ax,
     label: str,
     latitude: float,
     longitude: float,
     *,
     offset: tuple[float, float],
-    marker: str,
-    filled: bool,
-    marker_size: float,
-    marker_zorder: int,
 ) -> None:
-    """Draw a compact point label with plain black type and no text halo."""
+    """Draw one clean text label without creating another marker."""
 
-    ax.scatter(
-        longitude,
-        latitude,
-        s=marker_size,
-        marker=marker,
-        facecolor="#111111" if filled else "white",
-        edgecolor="#111111",
-        linewidth=0.9,
-        zorder=marker_zorder,
-    )
     ax.annotate(
         label,
         (longitude, latitude),
@@ -118,6 +123,35 @@ def _draw_simple_location_label(
         ha="left" if offset[0] >= 0 else "right",
         va="bottom" if offset[1] >= 0 else "top",
         zorder=12,
+    )
+
+
+def _draw_qpe_only_label(
+    ax,
+    label: str,
+    latitude: float,
+    longitude: float,
+    *,
+    offset: tuple[float, float],
+) -> None:
+    """Draw the standalone Donaldsonville QPE sample."""
+
+    ax.scatter(
+        longitude,
+        latitude,
+        s=22,
+        marker="s",
+        facecolor="#111111",
+        edgecolor="#111111",
+        linewidth=0.8,
+        zorder=11,
+    )
+    _draw_label_only(
+        ax,
+        label,
+        latitude,
+        longitude,
+        offset=offset,
     )
 
 
@@ -134,41 +168,34 @@ def _draw_ascension_locations(
     """Draw Ascension references, including the August 2016 comparison mode."""
 
     if (start, end) in ASCENSION_COMPARISON_WINDOWS:
-        # Draw the larger open CoCoRaHS circles first.
-        for name, latitude, longitude, total, offset in ASCENSION_GAUGE_TOTALS:
-            _draw_simple_location_label(
+        for name, latitude, longitude, gauge_total, offset in ASCENSION_COMPARISON_STATIONS:
+            qpe_total = base_map._sample_grid(data, grid, latitude, longitude)
+            _draw_marker_pair(ax, latitude, longitude)
+
+            if qpe_total is None:
+                label = f'{name}\n○ {gauge_total:.2f}"'
+            else:
+                label = f'{name}\n○ {gauge_total:.2f}"   ■ {qpe_total:.2f}"'
+
+            _draw_label_only(
                 ax,
-                f'{name}\n{total:.2f}"',
+                label,
                 latitude,
                 longitude,
                 offset=offset,
-                marker="o",
-                filled=False,
-                marker_size=34,
-                marker_zorder=10,
             )
 
-        # Draw the smaller filled QPE squares at the exact same station points.
-        # The nested symbols preserve the true locations while the labels sit on
-        # opposite sides of each point.
-        for name, latitude, longitude, offset in ASCENSION_QPE_SAMPLES:
-            sample = base_map._sample_grid(data, grid, latitude, longitude)
-            if sample is None:
-                continue
-            _draw_simple_location_label(
+        name, latitude, longitude, offset = DONALDSONVILLE_QPE
+        qpe_total = base_map._sample_grid(data, grid, latitude, longitude)
+        if qpe_total is not None:
+            _draw_qpe_only_label(
                 ax,
-                f'{name}\n{sample:.2f}"',
+                f'{name}\n■ {qpe_total:.2f}"',
                 latitude,
                 longitude,
                 offset=offset,
-                marker="s",
-                filled=True,
-                marker_size=13 if name != "Donaldsonville" else 22,
-                marker_zorder=11,
             )
 
-        # Tell the base renderer that CoCoRaHS values are present so its source
-        # footer includes the point-observation attribution.
         return True
 
     # For other periods, retain the normal in-parish city/sample behavior.
@@ -209,8 +236,6 @@ def render_map(
         base_map._draw_ascension_boundary = _draw_ascension_boundary
         base_map._draw_ascension_locations = _draw_ascension_locations
 
-        # Always show both datasets for the three requested comparison windows,
-        # regardless of the generic city-label and city-sample checkbox states.
         if (start, end) in ASCENSION_COMPARISON_WINDOWS:
             show_cities = True
             show_city_samples = True
@@ -219,14 +244,10 @@ def render_map(
     original_text = Axes.text
 
     def _ascension_imshow(self, *args, **kwargs):
-        # Use the same nearest-cell representation that _sample_grid reads.
-        # This prevents a threshold value such as 14.95 inches from appearing
-        # inside a visually blended 15-20 inch color band.
         kwargs["interpolation"] = "nearest"
         return original_imshow(self, *args, **kwargs)
 
     def _ascension_text(self, x, y, text, *args, **kwargs):
-        # Keep the explanatory key compact and accurate for the comparison map.
         if (
             isinstance(text, str)
             and text.startswith("Ascension Parish boundary")
@@ -235,8 +256,6 @@ def render_map(
             text = "Ascension Parish boundary\n○ CoCoRaHS gauge   ■ NOAA gridded QPE"
         return original_text(self, x, y, text, *args, **kwargs)
 
-    # The lock keeps the temporary Matplotlib overrides isolated if multiple
-    # Streamlit sessions render maps at the same time.
     with _RENDER_LOCK:
         if region_name == "Ascension Parish":
             Axes.imshow = _ascension_imshow
