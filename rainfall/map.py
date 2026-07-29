@@ -478,12 +478,12 @@ def render_map(
             weight="semibold",
             color="#111111",
             zorder=10,
-            bbox=dict(
-                boxstyle="round,pad=0.4",
-                facecolor="white",
-                edgecolor="#111111",
-                alpha=0.92,
-            ),
+            bbox={
+                "boxstyle": "round,pad=0.4",
+                "facecolor": "white",
+                "edgecolor": "#111111",
+                "alpha": 0.92,
+            },
         )
 
     ax.set_xlim(grid.west, grid.east)
