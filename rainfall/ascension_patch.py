@@ -28,11 +28,11 @@ ASCENSION_COMPARISON_WINDOWS = {
 # Each matched station is drawn once with a combined CoCoRaHS/QPE label.
 # Coordinates were verified against the uploaded CoCoRaHS station workbook.
 ASCENSION_COMPARISON_STATIONS = (
-    ("Prairieville 2.0 S", 30.276934, -90.979147, 15.02, (12, 10)),
-    ("Gonzales 0.8 E", 30.217250, -90.909870, 11.41, (12, 10)),
-    ("Gonzales 4.5 S", 30.151899, -90.928910, 19.13, (12, -10)),
+    ("Prairieville 2.0 S", 30.276934, -90.979147, 15.02, (14, 22)),
+    ("Gonzales 0.8 E", 30.217250, -90.909870, 11.41, (18, 18)),
+    ("Gonzales 4.5 S", 30.151899, -90.928910, 19.13, (-16, 30)),
 )
-DONALDSONVILLE_QPE = ("Donaldsonville", 30.101, -90.993, (8, 8))
+DONALDSONVILLE_QPE = ("Donaldsonville", 30.101, -90.993, (-28, 8))
 
 _RENDER_LOCK = threading.Lock()
 
@@ -120,6 +120,7 @@ def _draw_label_only(
         fontfamily="DejaVu Sans",
         color="#080808",
         weight="semibold",
+        linespacing=1.45,
         ha="left" if offset[0] >= 0 else "right",
         va="bottom" if offset[1] >= 0 else "top",
         zorder=12,
@@ -175,7 +176,7 @@ def _draw_ascension_locations(
             if qpe_total is None:
                 label = f'{name}\n○ {gauge_total:.2f}"'
             else:
-                label = f'{name}\n○ {gauge_total:.2f}"   ■ {qpe_total:.2f}"'
+                label = f'{name}\n○ {gauge_total:.2f}"     ■ {qpe_total:.2f}"'
 
             _draw_label_only(
                 ax,
@@ -253,7 +254,24 @@ def render_map(
             and text.startswith("Ascension Parish boundary")
             and (start, end) in ASCENSION_COMPARISON_WINDOWS
         ):
-            text = "Ascension Parish boundary\n○ CoCoRaHS gauge   ■ NOAA gridded QPE"
+            text = (
+                "Ascension Parish boundary\n"
+                "\n"
+                "○  CoCoRaHS gauge\n"
+                "■  NOAA gridded QPE"
+            )
+            kwargs.update(
+                {
+                    "fontsize": 8.4,
+                    "linespacing": 1.35,
+                    "bbox": {
+                        "boxstyle": "round,pad=0.65",
+                        "facecolor": "white",
+                        "edgecolor": "#111111",
+                        "alpha": 1,
+                    },
+                }
+            )
         return original_text(self, x, y, text, *args, **kwargs)
 
     with _RENDER_LOCK:
