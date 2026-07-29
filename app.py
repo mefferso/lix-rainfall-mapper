@@ -22,7 +22,7 @@ from rainfall.core import (
     validate_date_range,
 )
 from rainfall.boundaries import fetch_la_ms_boundaries
-from rainfall.map import render_map
+from rainfall.ascension_patch import render_map
 
 
 st.set_page_config(
@@ -130,13 +130,13 @@ with st.sidebar:
     with st.form("map_settings"):
         start_date = st.date_input(
             "Start date",
-            value=date(2016, 8, 1),
+            value=date(2016, 8, 12),
             min_value=date(2005, 1, 1),
             max_value=date.today(),
         )
         end_date = st.date_input(
             "End date",
-            value=date(2016, 8, 20),
+            value=date(2016, 8, 14),
             min_value=date(2005, 1, 1),
             max_value=date.today(),
         )
@@ -150,8 +150,8 @@ with st.sidebar:
             value=False,
             help=(
                 "Adds the nearest rainfall-grid value beneath each displayed city name. "
-                "For Ascension Parish on August 12–14, 2016, complete "
-                "Gonzales/Prairieville CoCoRaHS totals are used instead."
+                "For Ascension Parish on August 12–14, 2016, the three complete "
+                "Gonzales/Prairieville CoCoRaHS totals are shown automatically instead."
             ),
         )
         submitted = st.form_submit_button("Generate rainfall map", type="primary", use_container_width=True)
@@ -161,7 +161,7 @@ with st.sidebar:
 if not submitted and "result" not in st.session_state:
     st.subheader("Ready when you are")
     st.write(
-        "The default dates are already set to August 1–20, 2016. Adjust anything in the sidebar, then generate the map."
+        "The default dates are already set to August 12–14, 2016. Adjust anything in the sidebar, then generate the map."
     )
 
 if submitted:
