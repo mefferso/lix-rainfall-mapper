@@ -9,7 +9,7 @@ A browser-based tool for creating custom rainfall-accumulation maps across Louis
 - Accumulates and reprojects the grids onto a common Louisiana/Mississippi map.
 - Adds state, parish/county, and readable city references.
 - Optionally samples the rainfall grid at displayed city locations.
-- Provides state, WFO LIX, metro, southwest Mississippi, and coastal map presets.
+- Provides state, WFO LIX, metro, Ascension Parish, southwest Mississippi, and coastal map presets.
 - Exports a publication-ready PNG and a georeferenced GeoTIFF in inches.
 
 The default selection is August 1–20, 2016.
@@ -44,7 +44,7 @@ streamlit run app.py
 ## Current scope
 
 - Total precipitation for periods up to 90 days.
-- Statewide, combined, WFO LIX, metro, southwest Mississippi, and coastal map areas.
+- Statewide, combined, WFO LIX, metro, Ascension Parish, southwest Mississippi, and coastal map areas.
 - The official WFO LIX forecast-area outline on the WFO LIX preset.
 - Fixed rainfall color intervals for consistent event-to-event comparison.
 
