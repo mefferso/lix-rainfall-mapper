@@ -107,7 +107,16 @@ CITY_LABEL_OFFSETS = {
     "Prairieville": (5, -15),
 }
 
-
+ASCENSION_CITY_NAMES = {"Donaldsonville", "Gonzales", "Prairieville"}
+ASCENSION_EVENT_DATES = (date(2016, 8, 12), date(2016, 8, 14))
+ASCENSION_GAUGE_TOTALS = (
+    # Complete CoCoRaHS totals from the uploaded Ascension Parish workbook.
+    # The offsets deliberately separate nearby station labels; dotted leader
+    # lines preserve the exact observing location.
+    ("Prairieville 2.0 S", 30.276934, -90.979147, 15.02, (-72, 24)),
+    ("Gonzales 0.8 E", 30.217250, -90.909870, 11.41, (34, 14)),
+    ("Gonzales 4.5 S", 30.151899, -90.928910, 19.13, (34, -26)),
+)
 
 
 def _rings(geometry: dict):
@@ -127,6 +136,36 @@ def _draw_boundaries(ax, boundaries: dict, layer: str, **style) -> None:
             ax.plot(coordinates[:, 0], coordinates[:, 1], **style)
 
 
+def _is_ascension_feature(feature: dict) -> bool:
+    """Return whether a county-layer feature represents Ascension Parish."""
+
+    properties = feature.get("properties", {})
+    if properties.get("layer") != "county":
+        return False
+    for value in properties.values():
+        normalized = str(value).strip().lower()
+        if normalized in {"ascension", "ascension parish", "22005"}:
+            return True
+    return False
+
+
+def _draw_ascension_boundary(ax, boundaries: dict) -> None:
+    """Emphasize the official Ascension Parish outline."""
+
+    for feature in boundaries["features"]:
+        if not _is_ascension_feature(feature):
+            continue
+        for ring in _rings(feature["geometry"]):
+            coordinates = np.asarray(ring)
+            ax.plot(
+                coordinates[:, 0],
+                coordinates[:, 1],
+                color="#111111",
+                linewidth=3.0,
+                alpha=1,
+                solid_capstyle="round",
+                zorder=8,
+            )
 
 
 def _sample_grid(
@@ -152,7 +191,8 @@ def _format_date(day: date) -> str:
 
 
 def _add_scale_bar(ax, grid: TargetGrid) -> None:
-    miles = 20 if (grid.east - grid.west) < 2.0 else 50
+    longitude_span = grid.east - grid.west
+    miles = 10 if longitude_span < 1.0 else 20 if longitude_span < 2.0 else 50
     latitude = grid.south + 0.055 * (grid.north - grid.south)
     start = grid.west + 0.045 * (grid.east - grid.west)
     degrees = miles / (69.172 * math.cos(math.radians(latitude)))
@@ -174,9 +214,118 @@ def _add_scale_bar(ax, grid: TargetGrid) -> None:
         zorder=9,
     )
     ax.text(
-        start + degrees / 2, latitude + label_offset, f"{miles} miles",
-        ha="center", va="bottom", fontsize=7.5, color="#17212b", zorder=9,
+        start + degrees / 2,
+        latitude + label_offset,
+        f"{miles} miles",
+        ha="center",
+        va="bottom",
+        fontsize=7.5,
+        color="#17212b",
+        zorder=9,
     )
+
+
+def _draw_location_label(
+    ax,
+    label: str,
+    latitude: float,
+    longitude: float,
+    *,
+    offset: tuple[float, float] = (5, 5),
+    leader: bool = False,
+) -> None:
+    ax.scatter(
+        longitude,
+        latitude,
+        s=16,
+        facecolor="white",
+        edgecolor="#101820",
+        linewidth=0.8,
+        zorder=9,
+    )
+    arrowprops = None
+    if leader:
+        arrowprops = {
+            "arrowstyle": "-",
+            "color": "#25313a",
+            "linewidth": 0.9,
+            "linestyle": (0, (1.5, 2.4)),
+            "shrinkA": 2,
+            "shrinkB": 3,
+        }
+    ax.annotate(
+        label,
+        (longitude, latitude),
+        xytext=offset,
+        textcoords="offset points",
+        fontsize=9.0,
+        color="#101820",
+        weight="bold",
+        ha="left" if offset[0] >= 0 else "right",
+        va="bottom" if offset[1] >= 0 else "top",
+        arrowprops=arrowprops,
+        path_effects=[path_effects.withStroke(linewidth=2.4, foreground="white")],
+        zorder=10,
+    )
+
+
+def _draw_ascension_locations(
+    ax,
+    data: np.ndarray,
+    grid: TargetGrid,
+    start: date,
+    end: date,
+    *,
+    show_cities: bool,
+    show_city_samples: bool,
+) -> bool:
+    """Draw only in-parish references on the Ascension preset.
+
+    Returns True when the event-specific CoCoRaHS totals were used.
+    """
+
+    use_event_gauges = show_city_samples and (start, end) == ASCENSION_EVENT_DATES
+    if use_event_gauges:
+        for name, latitude, longitude, total, offset in ASCENSION_GAUGE_TOTALS:
+            _draw_location_label(
+                ax,
+                f'{name}\n{total:.2f}"',
+                latitude,
+                longitude,
+                offset=offset,
+                leader=True,
+            )
+
+        latitude, longitude, _ = CITIES["Donaldsonville"]
+        sample = _sample_grid(data, grid, latitude, longitude)
+        label = "Donaldsonville"
+        if sample is not None:
+            label = f'Donaldsonville\n{sample:.2f}"'
+        _draw_location_label(
+            ax,
+            label,
+            latitude,
+            longitude,
+            offset=(-42, -24),
+            leader=True,
+        )
+        return True
+
+    for name in sorted(ASCENSION_CITY_NAMES):
+        latitude, longitude, _ = CITIES[name]
+        label = name
+        if show_city_samples:
+            sample = _sample_grid(data, grid, latitude, longitude)
+            if sample is not None:
+                label = f'{name}\n{sample:.2f}"'
+        _draw_location_label(
+            ax,
+            label,
+            latitude,
+            longitude,
+            offset=CITY_LABEL_OFFSETS.get(name, (5, 5)),
+        )
+    return False
 
 
 def render_map(
@@ -200,7 +349,8 @@ def render_map(
     cmap.set_over("#5a1421")
     norm = BoundaryNorm(RAIN_LEVELS, cmap.N)
 
-    fig, ax = plt.subplots(figsize=(11.5, 9.2), dpi=160)
+    figure_size = (9.2, 9.2) if region_name == "Ascension Parish" else (11.5, 9.2)
+    fig, ax = plt.subplots(figsize=figure_size, dpi=160)
     fig.patch.set_facecolor("white")
     ax.set_facecolor("#f7f4ed")
 
@@ -245,41 +395,39 @@ def render_map(
             alpha=1,
             zorder=8,
         )
+    elif region_name == "Ascension Parish":
+        _draw_ascension_boundary(ax, boundaries)
 
+    used_ascension_gauges = False
     if show_cities or show_city_samples:
-        longitude_span = grid.east - grid.west
-        for name, (latitude, longitude, maximum_span) in CITIES.items():
-            if longitude_span > maximum_span:
-                continue
-            if grid.west < longitude < grid.east and grid.south < latitude < grid.north:
-                label = name
-                if show_city_samples:
-                    sample = _sample_grid(data, grid, latitude, longitude)
-                    if sample is not None:
-                        label = f'{name}\n{sample:.2f}"'
-                offset = CITY_LABEL_OFFSETS.get(name, (5, 5))
-                ax.scatter(
-                    longitude,
-                    latitude,
-                    s=16,
-                    facecolor="white",
-                    edgecolor="#101820",
-                    linewidth=0.8,
-                    zorder=9,
-                )
-                ax.annotate(
-                    label,
-                    (longitude, latitude),
-                    xytext=offset,
-                    textcoords="offset points",
-                    fontsize=9.0,
-                    color="#101820",
-                    weight="bold",
-                    path_effects=[
-                        path_effects.withStroke(linewidth=2.4, foreground="white")
-                    ],
-                    zorder=10,
-                )
+        if region_name == "Ascension Parish":
+            used_ascension_gauges = _draw_ascension_locations(
+                ax,
+                data,
+                grid,
+                start,
+                end,
+                show_cities=show_cities,
+                show_city_samples=show_city_samples,
+            )
+        else:
+            longitude_span = grid.east - grid.west
+            for name, (latitude, longitude, maximum_span) in CITIES.items():
+                if longitude_span > maximum_span:
+                    continue
+                if grid.west < longitude < grid.east and grid.south < latitude < grid.north:
+                    label = name
+                    if show_city_samples:
+                        sample = _sample_grid(data, grid, latitude, longitude)
+                        if sample is not None:
+                            label = f'{name}\n{sample:.2f}"'
+                    _draw_location_label(
+                        ax,
+                        label,
+                        latitude,
+                        longitude,
+                        offset=CITY_LABEL_OFFSETS.get(name, (5, 5)),
+                    )
 
     title = custom_title.strip() or "Observed Rainfall"
     period = _format_date(start) if start == end else f"{_format_date(start)} – {_format_date(end)}"
@@ -312,6 +460,29 @@ def render_map(
                 facecolor="white",
                 edgecolor="#111111",
                 alpha=0.9,
+            ),
+        )
+    elif region_name == "Ascension Parish":
+        note = "Ascension Parish boundary"
+        if used_ascension_gauges:
+            note += "\nGonzales/Prairieville: CoCoRaHS gauges"
+            note += "\nDonaldsonville: NOAA gridded estimate"
+        ax.text(
+            0.985,
+            0.025,
+            note,
+            transform=ax.transAxes,
+            ha="right",
+            va="bottom",
+            fontsize=7.3,
+            weight="semibold",
+            color="#111111",
+            zorder=10,
+            bbox=dict(
+                boxstyle="round,pad=0.4",
+                facecolor="white",
+                edgecolor="#111111",
+                alpha=0.92,
             ),
         )
 
@@ -354,10 +525,16 @@ def render_map(
     colorbar.set_label("Rainfall (inches)", fontsize=9.5, weight="semibold", labelpad=7)
     colorbar.outline.set_linewidth(0.6)
 
+    source_note = (
+        "Source: NOAA/NWS River Forecast Center multi-sensor precipitation estimates"
+        " • Daily periods valid 12Z–12Z"
+    )
+    if used_ascension_gauges:
+        source_note += " • Point totals: CoCoRaHS"
     fig.text(
         0.5,
         0.018,
-        "Source: NOAA/NWS River Forecast Center multi-sensor precipitation estimates • Daily periods valid 12Z–12Z",
+        source_note,
         ha="center",
         va="bottom",
         fontsize=7.1,
@@ -366,6 +543,7 @@ def render_map(
     fig.subplots_adjust(left=0.035, right=0.965, top=0.90, bottom=0.105)
 
     output = BytesIO()
-    fig.savefig(output, format="png", dpi=180, facecolor="white", bbox_inches="tight")
+    save_options = {} if region_name == "Ascension Parish" else {"bbox_inches": "tight"}
+    fig.savefig(output, format="png", dpi=180, facecolor="white", **save_options)
     plt.close(fig)
     return output.getvalue()
