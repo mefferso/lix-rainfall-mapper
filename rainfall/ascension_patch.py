@@ -106,12 +106,20 @@ def _draw_ascension_locations(
     return False
 
 
-def render_map(*args, **kwargs) -> bytes:
+def render_map(
+    data: np.ndarray,
+    grid: TargetGrid,
+    boundaries: dict,
+    start: date,
+    end: date,
+    *,
+    custom_title: str = "",
+    show_counties: bool = True,
+    show_cities: bool = True,
+    show_city_samples: bool = False,
+    region_name: str = "",
+) -> bytes:
     """Render through the base module with Ascension-specific fixes applied."""
-
-    region_name = kwargs.get("region_name", "")
-    start = args[3] if len(args) > 3 else kwargs.get("start")
-    end = args[4] if len(args) > 4 else kwargs.get("end")
 
     if region_name == "Ascension Parish":
         base_map._is_ascension_feature = _is_ascension_feature
@@ -121,6 +129,17 @@ def render_map(*args, **kwargs) -> bytes:
         # The historical Ascension map should show its verified point totals
         # automatically, even if the generic city-sample checkbox is off.
         if (start, end) == ASCENSION_EVENT_DATES:
-            kwargs["show_city_samples"] = True
+            show_city_samples = True
 
-    return base_map.render_map(*args, **kwargs)
+    return base_map.render_map(
+        data,
+        grid,
+        boundaries,
+        start,
+        end,
+        custom_title=custom_title,
+        show_counties=show_counties,
+        show_cities=show_cities,
+        show_city_samples=show_city_samples,
+        region_name=region_name,
+    )
