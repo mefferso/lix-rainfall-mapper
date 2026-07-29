@@ -54,6 +54,7 @@ REGIONS: dict[str, tuple[float, float, float, float]] = {
     "WFO LIX": (-91.95, 28.75, -88.25, 31.50),
     "New Orleans Metro": (-90.75, 29.55, -89.45, 30.50),
     "Baton Rouge Metro": (-91.65, 30.15, -90.55, 30.85),
+    "Ascension Parish": (-91.25, 29.95, -90.45, 30.48),
     "Southwest Mississippi": (-91.10, 30.70, -89.45, 31.70),
     "Coastal Mississippi": (-89.85, 30.15, -88.05, 30.95),
     "Coastal Louisiana": (-94.15, 28.65, -88.65, 30.75),
