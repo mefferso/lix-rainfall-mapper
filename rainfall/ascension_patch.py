@@ -25,7 +25,9 @@ ASCENSION_COMPARISON_WINDOWS = {
     (date(2016, 8, 12), date(2016, 8, 14)),
 }
 
-# Each matched station is drawn once with a combined CoCoRaHS/QPE label.
+# Each named location gets exactly one map marker. The three comparison
+# stations use an open CoCoRaHS circle; Donaldsonville uses a filled square
+# because it is a NOAA-only grid sample.
 # Coordinates were verified against the uploaded CoCoRaHS station workbook.
 ASCENSION_COMPARISON_STATIONS = (
     ("Prairieville 2.0 S", 30.276934, -90.979147, 15.02, (14, 22)),
@@ -76,8 +78,8 @@ def _draw_ascension_boundary(ax, boundaries: dict) -> None:
             )
 
 
-def _draw_marker_pair(ax, latitude: float, longitude: float) -> None:
-    """Draw one shared comparison symbol at the matched station location."""
+def _draw_gauge_marker(ax, latitude: float, longitude: float) -> None:
+    """Draw one open-circle marker for a CoCoRaHS station location."""
 
     ax.scatter(
         longitude,
@@ -88,16 +90,6 @@ def _draw_marker_pair(ax, latitude: float, longitude: float) -> None:
         edgecolor="#111111",
         linewidth=0.9,
         zorder=10,
-    )
-    ax.scatter(
-        longitude,
-        latitude,
-        s=14,
-        marker="s",
-        facecolor="#111111",
-        edgecolor="#111111",
-        linewidth=0.8,
-        zorder=11,
     )
 
 
@@ -171,12 +163,12 @@ def _draw_ascension_locations(
     if (start, end) in ASCENSION_COMPARISON_WINDOWS:
         for name, latitude, longitude, gauge_total, offset in ASCENSION_COMPARISON_STATIONS:
             qpe_total = base_map._sample_grid(data, grid, latitude, longitude)
-            _draw_marker_pair(ax, latitude, longitude)
+            _draw_gauge_marker(ax, latitude, longitude)
 
             if qpe_total is None:
-                label = f'{name}\n○ {gauge_total:.2f}"'
+                label = f'{name}\nGauge {gauge_total:.2f}"'
             else:
-                label = f'{name}\n○ {gauge_total:.2f}"     ■ {qpe_total:.2f}"'
+                label = f'{name}\nGauge {gauge_total:.2f}"     QPE {qpe_total:.2f}"'
 
             _draw_label_only(
                 ax,
@@ -191,7 +183,7 @@ def _draw_ascension_locations(
         if qpe_total is not None:
             _draw_qpe_only_label(
                 ax,
-                f'{name}\n■ {qpe_total:.2f}"',
+                f'{name}\nQPE {qpe_total:.2f}"',
                 latitude,
                 longitude,
                 offset=offset,
@@ -257,8 +249,9 @@ def render_map(
             text = (
                 "Ascension Parish boundary\n"
                 "\n"
-                "○  CoCoRaHS gauge\n"
-                "■  NOAA gridded QPE"
+                "○  CoCoRaHS station\n"
+                "■  NOAA-only grid sample\n"
+                "Labels: Gauge total  |  QPE total"
             )
             kwargs.update(
                 {
