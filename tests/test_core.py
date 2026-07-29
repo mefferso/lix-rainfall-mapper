@@ -58,6 +58,10 @@ def test_operational_region_presets_are_available():
     assert expected <= REGIONS.keys()
 
 
+def test_ascension_region_is_parish_focused():
+    assert REGIONS["Ascension Parish"] == (-91.14, 30.03, -90.60, 30.38)
+
+
 @pytest.mark.parametrize(
     "region_name",
     [
