@@ -8,8 +8,10 @@ samples accumulated over the selected map period.
 from __future__ import annotations
 
 from datetime import date
+import threading
 
 import matplotlib.patheffects as path_effects
+from matplotlib.axes import Axes
 import numpy as np
 
 from . import map as base_map
@@ -24,18 +26,21 @@ ASCENSION_COMPARISON_WINDOWS = {
 }
 ASCENSION_GAUGE_TOTALS = (
     # Coordinates verified against the uploaded CoCoRaHS station workbook.
-    # Short offsets keep each label close to its actual observing point.
-    ("Prairieville 2.0 S", 30.276934, -90.979147, 15.02, (-8, -8)),
-    ("Gonzales 0.8 E", 30.217250, -90.909870, 11.41, (8, -8)),
-    ("Gonzales 4.5 S", 30.151899, -90.928910, 19.13, (8, -8)),
+    # Gauge labels sit below/left or below/right of the shared comparison point.
+    ("Prairieville 2.0 S", 30.276934, -90.979147, 15.02, (-12, -10)),
+    ("Gonzales 0.8 E", 30.217250, -90.909870, 11.41, (12, -10)),
+    ("Gonzales 4.5 S", 30.151899, -90.928910, 19.13, (12, -10)),
 )
 ASCENSION_QPE_SAMPLES = (
-    # Existing city locations used by the generic map sampler.
-    # Offsets place the city samples opposite the nearby gauge labels.
-    ("Prairieville", (8, 8)),
-    ("Gonzales", (-8, 8)),
-    ("Donaldsonville", (8, 8)),
+    # Sample NOAA QPE at the exact CoCoRaHS station coordinates so each pair
+    # compares the same location. Donaldsonville remains a QPE-only reference.
+    ("Prairieville 2.0 S", 30.276934, -90.979147, (12, 10)),
+    ("Gonzales 0.8 E", 30.217250, -90.909870, (-12, 10)),
+    ("Gonzales 4.5 S", 30.151899, -90.928910, (-12, 10)),
+    ("Donaldsonville", 30.101, -90.993, (8, 8)),
 )
+
+_RENDER_LOCK = threading.Lock()
 
 
 def _is_ascension_feature(feature: dict) -> bool:
@@ -86,31 +91,33 @@ def _draw_simple_location_label(
     offset: tuple[float, float],
     marker: str,
     filled: bool,
+    marker_size: float,
+    marker_zorder: int,
 ) -> None:
     """Draw a compact point label with plain black type and no text halo."""
 
     ax.scatter(
         longitude,
         latitude,
-        s=19,
+        s=marker_size,
         marker=marker,
         facecolor="#111111" if filled else "white",
         edgecolor="#111111",
         linewidth=0.9,
-        zorder=10,
+        zorder=marker_zorder,
     )
     ax.annotate(
         label,
         (longitude, latitude),
         xytext=offset,
         textcoords="offset points",
-        fontsize=8.5,
+        fontsize=10.0,
         fontfamily="DejaVu Sans",
         color="#080808",
         weight="semibold",
         ha="left" if offset[0] >= 0 else "right",
         va="bottom" if offset[1] >= 0 else "top",
-        zorder=11,
+        zorder=12,
     )
 
 
@@ -127,6 +134,7 @@ def _draw_ascension_locations(
     """Draw Ascension references, including the August 2016 comparison mode."""
 
     if (start, end) in ASCENSION_COMPARISON_WINDOWS:
+        # Draw the larger open CoCoRaHS circles first.
         for name, latitude, longitude, total, offset in ASCENSION_GAUGE_TOTALS:
             _draw_simple_location_label(
                 ax,
@@ -136,10 +144,14 @@ def _draw_ascension_locations(
                 offset=offset,
                 marker="o",
                 filled=False,
+                marker_size=34,
+                marker_zorder=10,
             )
 
-        for name, offset in ASCENSION_QPE_SAMPLES:
-            latitude, longitude, _ = base_map.CITIES[name]
+        # Draw the smaller filled QPE squares at the exact same station points.
+        # The nested symbols preserve the true locations while the labels sit on
+        # opposite sides of each point.
+        for name, latitude, longitude, offset in ASCENSION_QPE_SAMPLES:
             sample = base_map._sample_grid(data, grid, latitude, longitude)
             if sample is None:
                 continue
@@ -151,6 +163,8 @@ def _draw_ascension_locations(
                 offset=offset,
                 marker="s",
                 filled=True,
+                marker_size=13 if name != "Donaldsonville" else 22,
+                marker_zorder=11,
             )
 
         # Tell the base renderer that CoCoRaHS values are present so its source
@@ -201,15 +215,45 @@ def render_map(
             show_cities = True
             show_city_samples = True
 
-    return base_map.render_map(
-        data,
-        grid,
-        boundaries,
-        start,
-        end,
-        custom_title=custom_title,
-        show_counties=show_counties,
-        show_cities=show_cities,
-        show_city_samples=show_city_samples,
-        region_name=region_name,
-    )
+    original_imshow = Axes.imshow
+    original_text = Axes.text
+
+    def _ascension_imshow(self, *args, **kwargs):
+        # Use the same nearest-cell representation that _sample_grid reads.
+        # This prevents a threshold value such as 14.95 inches from appearing
+        # inside a visually blended 15-20 inch color band.
+        kwargs["interpolation"] = "nearest"
+        return original_imshow(self, *args, **kwargs)
+
+    def _ascension_text(self, x, y, text, *args, **kwargs):
+        # Keep the explanatory key compact and accurate for the comparison map.
+        if (
+            isinstance(text, str)
+            and text.startswith("Ascension Parish boundary")
+            and (start, end) in ASCENSION_COMPARISON_WINDOWS
+        ):
+            text = "Ascension Parish boundary\n○ CoCoRaHS gauge   ■ NOAA gridded QPE"
+        return original_text(self, x, y, text, *args, **kwargs)
+
+    # The lock keeps the temporary Matplotlib overrides isolated if multiple
+    # Streamlit sessions render maps at the same time.
+    with _RENDER_LOCK:
+        if region_name == "Ascension Parish":
+            Axes.imshow = _ascension_imshow
+            Axes.text = _ascension_text
+        try:
+            return base_map.render_map(
+                data,
+                grid,
+                boundaries,
+                start,
+                end,
+                custom_title=custom_title,
+                show_counties=show_counties,
+                show_cities=show_cities,
+                show_city_samples=show_city_samples,
+                region_name=region_name,
+            )
+        finally:
+            Axes.imshow = original_imshow
+            Axes.text = original_text
