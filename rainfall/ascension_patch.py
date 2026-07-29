@@ -23,22 +23,19 @@ ASCENSION_COMPARISON_WINDOWS = {
     (date(2016, 8, 12), date(2016, 8, 14)),
 }
 ASCENSION_GAUGE_TOTALS = (
-    # Fixed complete CoCoRaHS totals for August 12-14, 2016.
-    # Offsets keep the gauge labels separated from nearby QPE city samples.
-    ("Prairieville 2.0 S", 30.276934, -90.979147, 15.02, (-74, -24)),
-    ("Gonzales 0.8 E", 30.217250, -90.909870, 11.41, (38, -16)),
-    ("Gonzales 4.5 S", 30.151899, -90.928910, 19.13, (40, -22)),
+    # Coordinates verified against the uploaded CoCoRaHS station workbook.
+    # Short offsets keep each label close to its actual observing point.
+    ("Prairieville 2.0 S", 30.276934, -90.979147, 15.02, (-8, -8)),
+    ("Gonzales 0.8 E", 30.217250, -90.909870, 11.41, (8, -8)),
+    ("Gonzales 4.5 S", 30.151899, -90.928910, 19.13, (8, -8)),
 )
 ASCENSION_QPE_SAMPLES = (
     # Existing city locations used by the generic map sampler.
-    ("Prairieville", (24, 28)),
-    ("Gonzales", (-24, 28)),
-    ("Donaldsonville", (-18, 20)),
+    # Offsets place the city samples opposite the nearby gauge labels.
+    ("Prairieville", (8, 8)),
+    ("Gonzales", (-8, 8)),
+    ("Donaldsonville", (8, 8)),
 )
-
-
-def _short_date(day: date) -> str:
-    return f"{day.month}/{day.day}"
 
 
 def _is_ascension_feature(feature: dict) -> bool:
@@ -80,23 +77,25 @@ def _draw_ascension_boundary(ax, boundaries: dict) -> None:
             )
 
 
-def _draw_qpe_location_label(
+def _draw_simple_location_label(
     ax,
     label: str,
     latitude: float,
     longitude: float,
     *,
     offset: tuple[float, float],
+    marker: str,
+    filled: bool,
 ) -> None:
-    """Draw a square-marked NOAA QPE sample distinct from round gauge markers."""
+    """Draw a compact point label with plain black type and no text halo."""
 
     ax.scatter(
         longitude,
         latitude,
-        s=22,
-        marker="s",
-        facecolor="#17212b",
-        edgecolor="white",
+        s=19,
+        marker=marker,
+        facecolor="#111111" if filled else "white",
+        edgecolor="#111111",
         linewidth=0.9,
         zorder=10,
     )
@@ -105,20 +104,12 @@ def _draw_qpe_location_label(
         (longitude, latitude),
         xytext=offset,
         textcoords="offset points",
-        fontsize=8.2,
-        color="#17212b",
-        weight="bold",
+        fontsize=8.5,
+        fontfamily="DejaVu Sans",
+        color="#080808",
+        weight="semibold",
         ha="left" if offset[0] >= 0 else "right",
         va="bottom" if offset[1] >= 0 else "top",
-        arrowprops={
-            "arrowstyle": "-",
-            "color": "#25313a",
-            "linewidth": 0.9,
-            "linestyle": "solid",
-            "shrinkA": 2,
-            "shrinkB": 3,
-        },
-        path_effects=[path_effects.withStroke(linewidth=2.4, foreground="white")],
         zorder=11,
     )
 
@@ -136,20 +127,15 @@ def _draw_ascension_locations(
     """Draw Ascension references, including the August 2016 comparison mode."""
 
     if (start, end) in ASCENSION_COMPARISON_WINDOWS:
-        gauge_period = (
-            f"{_short_date(ASCENSION_GAUGE_DATES[0])}–"
-            f"{_short_date(ASCENSION_GAUGE_DATES[1])}"
-        )
-        selected_period = f"{_short_date(start)}–{_short_date(end)}"
-
         for name, latitude, longitude, total, offset in ASCENSION_GAUGE_TOTALS:
-            base_map._draw_location_label(
+            _draw_simple_location_label(
                 ax,
-                f'{name}\nCoCoRaHS {gauge_period}: {total:.2f}"',
+                f'{name}\n{total:.2f}"',
                 latitude,
                 longitude,
                 offset=offset,
-                leader=True,
+                marker="o",
+                filled=False,
             )
 
         for name, offset in ASCENSION_QPE_SAMPLES:
@@ -157,12 +143,14 @@ def _draw_ascension_locations(
             sample = base_map._sample_grid(data, grid, latitude, longitude)
             if sample is None:
                 continue
-            _draw_qpe_location_label(
+            _draw_simple_location_label(
                 ax,
-                f'{name}\nQPE {selected_period}: {sample:.2f}"',
+                f'{name}\n{sample:.2f}"',
                 latitude,
                 longitude,
                 offset=offset,
+                marker="s",
+                filled=True,
             )
 
         # Tell the base renderer that CoCoRaHS values are present so its source
