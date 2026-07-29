@@ -1,8 +1,8 @@
 """Ascension Parish-specific rendering behavior.
 
-This module wraps the general map renderer so the August 12-14, 2016
-Ascension preset always shows the three complete CoCoRaHS totals and a
-clearly emphasized official parish boundary.
+This module wraps the general map renderer so the August 2016 comparison
+windows show the three complete CoCoRaHS totals alongside NOAA gridded QPE
+samples accumulated over the selected map period.
 """
 
 from __future__ import annotations
@@ -16,12 +16,29 @@ from . import map as base_map
 from .core import TargetGrid
 
 
-ASCENSION_EVENT_DATES = (date(2016, 8, 12), date(2016, 8, 14))
+ASCENSION_GAUGE_DATES = (date(2016, 8, 12), date(2016, 8, 14))
+ASCENSION_COMPARISON_WINDOWS = {
+    (date(2016, 8, 10), date(2016, 8, 14)),
+    (date(2016, 8, 11), date(2016, 8, 14)),
+    (date(2016, 8, 12), date(2016, 8, 14)),
+}
 ASCENSION_GAUGE_TOTALS = (
-    ("Prairieville 2.0 S", 30.276934, -90.979147, 15.02, (-68, 24)),
-    ("Gonzales 0.8 E", 30.217250, -90.909870, 11.41, (32, 14)),
-    ("Gonzales 4.5 S", 30.151899, -90.928910, 19.13, (32, -24)),
+    # Fixed complete CoCoRaHS totals for August 12-14, 2016.
+    # Offsets keep the gauge labels separated from nearby QPE city samples.
+    ("Prairieville 2.0 S", 30.276934, -90.979147, 15.02, (-74, -24)),
+    ("Gonzales 0.8 E", 30.217250, -90.909870, 11.41, (38, -16)),
+    ("Gonzales 4.5 S", 30.151899, -90.928910, 19.13, (40, -22)),
 )
+ASCENSION_QPE_SAMPLES = (
+    # Existing city locations used by the generic map sampler.
+    ("Prairieville", (24, 28)),
+    ("Gonzales", (-24, 28)),
+    ("Donaldsonville", (-18, 20)),
+)
+
+
+def _short_date(day: date) -> str:
+    return f"{day.month}/{day.day}"
 
 
 def _is_ascension_feature(feature: dict) -> bool:
@@ -63,6 +80,49 @@ def _draw_ascension_boundary(ax, boundaries: dict) -> None:
             )
 
 
+def _draw_qpe_location_label(
+    ax,
+    label: str,
+    latitude: float,
+    longitude: float,
+    *,
+    offset: tuple[float, float],
+) -> None:
+    """Draw a square-marked NOAA QPE sample distinct from round gauge markers."""
+
+    ax.scatter(
+        longitude,
+        latitude,
+        s=22,
+        marker="s",
+        facecolor="#17212b",
+        edgecolor="white",
+        linewidth=0.9,
+        zorder=10,
+    )
+    ax.annotate(
+        label,
+        (longitude, latitude),
+        xytext=offset,
+        textcoords="offset points",
+        fontsize=8.2,
+        color="#17212b",
+        weight="bold",
+        ha="left" if offset[0] >= 0 else "right",
+        va="bottom" if offset[1] >= 0 else "top",
+        arrowprops={
+            "arrowstyle": "-",
+            "color": "#25313a",
+            "linewidth": 0.9,
+            "linestyle": "solid",
+            "shrinkA": 2,
+            "shrinkB": 3,
+        },
+        path_effects=[path_effects.withStroke(linewidth=2.4, foreground="white")],
+        zorder=11,
+    )
+
+
 def _draw_ascension_locations(
     ax,
     data: np.ndarray,
@@ -73,20 +133,41 @@ def _draw_ascension_locations(
     show_cities: bool,
     show_city_samples: bool,
 ) -> bool:
-    """Use exactly the three complete event totals for the target event."""
+    """Draw Ascension references, including the August 2016 comparison mode."""
 
-    if (start, end) == ASCENSION_EVENT_DATES:
+    if (start, end) in ASCENSION_COMPARISON_WINDOWS:
+        gauge_period = (
+            f"{_short_date(ASCENSION_GAUGE_DATES[0])}–"
+            f"{_short_date(ASCENSION_GAUGE_DATES[1])}"
+        )
+        selected_period = f"{_short_date(start)}–{_short_date(end)}"
+
         for name, latitude, longitude, total, offset in ASCENSION_GAUGE_TOTALS:
             base_map._draw_location_label(
                 ax,
-                f'{name}\n{total:.2f}"',
+                f'{name}\nCoCoRaHS {gauge_period}: {total:.2f}"',
                 latitude,
                 longitude,
                 offset=offset,
                 leader=True,
             )
-        # False suppresses the legacy Donaldsonville-specific annotation block.
-        return False
+
+        for name, offset in ASCENSION_QPE_SAMPLES:
+            latitude, longitude, _ = base_map.CITIES[name]
+            sample = base_map._sample_grid(data, grid, latitude, longitude)
+            if sample is None:
+                continue
+            _draw_qpe_location_label(
+                ax,
+                f'{name}\nQPE {selected_period}: {sample:.2f}"',
+                latitude,
+                longitude,
+                offset=offset,
+            )
+
+        # Tell the base renderer that CoCoRaHS values are present so its source
+        # footer includes the point-observation attribution.
+        return True
 
     # For other periods, retain the normal in-parish city/sample behavior.
     for name in sorted(base_map.ASCENSION_CITY_NAMES):
@@ -126,9 +207,10 @@ def render_map(
         base_map._draw_ascension_boundary = _draw_ascension_boundary
         base_map._draw_ascension_locations = _draw_ascension_locations
 
-        # The historical Ascension map should show its verified point totals
-        # automatically, even if the generic city-sample checkbox is off.
-        if (start, end) == ASCENSION_EVENT_DATES:
+        # Always show both datasets for the three requested comparison windows,
+        # regardless of the generic city-label and city-sample checkbox states.
+        if (start, end) in ASCENSION_COMPARISON_WINDOWS:
+            show_cities = True
             show_city_samples = True
 
     return base_map.render_map(
