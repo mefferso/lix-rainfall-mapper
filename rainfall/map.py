@@ -118,6 +118,18 @@ ASCENSION_LABEL_OFFSETS = {
     "Gonzales 4.5 S": (-8, 8),
 }
 
+RAINFALL_DISPLAY_MODES = ("Raw", "Smooth")
+
+
+def _rainfall_interpolation(rainfall_display_mode: str) -> str:
+    """Return the display-only interpolation for the rainfall image."""
+
+    if rainfall_display_mode not in RAINFALL_DISPLAY_MODES:
+        raise ValueError(
+            f"Rainfall display mode must be one of: {', '.join(RAINFALL_DISPLAY_MODES)}"
+        )
+    return "nearest" if rainfall_display_mode == "Raw" else "bilinear"
+
 
 def _rings(geometry: dict):
     if geometry["type"] == "Polygon":
@@ -306,6 +318,7 @@ def render_map(
     show_cities: bool = True,
     show_city_samples: bool = False,
     region_name: str = "",
+    rainfall_display_mode: str = "Smooth",
 ) -> bytes:
     """Render a rainfall accumulation map and return PNG bytes."""
 
@@ -327,7 +340,7 @@ def render_map(
         origin="upper",
         cmap=cmap,
         norm=norm,
-        interpolation="bilinear",
+        interpolation=_rainfall_interpolation(rainfall_display_mode),
         zorder=1,
     )
 

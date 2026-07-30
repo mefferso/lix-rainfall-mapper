@@ -143,6 +143,13 @@ with st.sidebar:
         region_name = st.selectbox("Map area", list(REGIONS), index=0)
         custom_title = st.text_input("Map title", value="Observed Rainfall")
         st.markdown("##### Map layers")
+        rainfall_display_mode = st.radio(
+            "Rainfall display",
+            options=("Raw", "Smooth"),
+            index=1,
+            horizontal=True,
+            help="Smooth changes only the PNG display; downloads retain the original numerical grid.",
+        )
         show_counties = st.checkbox("Parish and county boundaries", value=True)
         show_cities = st.checkbox("City labels", value=True)
         show_city_samples = st.checkbox(
@@ -188,6 +195,7 @@ if submitted:
             "show_counties": show_counties,
             "show_cities": show_cities,
             "region_name": region_name,
+            "rainfall_display_mode": rainfall_display_mode,
         }
         # Streamlit can hot-reload app.py while retaining an older imported
         # rainfall.map module. Keep that transient mismatch from crashing a map.
@@ -215,6 +223,7 @@ if submitted:
             "start": start_date,
             "end": end_date,
             "region": region_name,
+            "rainfall_display_mode": rainfall_display_mode,
         }
         progress_bar.empty()
         status_box.empty()
