@@ -158,7 +158,7 @@ with st.sidebar:
             help=(
                 "Adds the nearest rainfall-grid value beneath each displayed city name. "
                 "The Ascension Parish map always shows its three fixed rainfall "
-                "observations instead of city samples."
+                "observations and the date-dependent Sorrento raster value instead."
             ),
         )
         submitted = st.form_submit_button("Generate rainfall map", type="primary", use_container_width=True)

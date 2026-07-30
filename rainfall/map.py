@@ -112,6 +112,11 @@ ASCENSION_STATIONS = (
     ("Gonzales 0.8 E", 30.217250, -90.909870, 11.41),
     ("Gonzales 4.5 S", 30.151899, -90.928910, 19.13),
 )
+SORRENTO_SAMPLE = {
+    "name": "Sorrento",
+    "latitude": 30.18,
+    "longitude": -90.87,
+}
 ASCENSION_LABEL_OFFSETS = {
     "Prairieville 2.0 S": (8, 8),
     "Gonzales 0.8 E": (8, 8),
@@ -292,7 +297,7 @@ def _draw_ascension_locations(
     show_cities: bool,
     show_city_samples: bool,
 ) -> bool:
-    """Draw the three fixed observations used by the Ascension preset."""
+    """Draw Ascension's fixed observations and dynamic Sorrento raster sample."""
 
     for name, latitude, longitude, total in ASCENSION_STATIONS:
         _draw_location_label(
@@ -301,6 +306,22 @@ def _draw_ascension_locations(
             latitude,
             longitude,
             offset=ASCENSION_LABEL_OFFSETS[name],
+            marker_size=36,
+        )
+
+    sorrento_total = _sample_grid(
+        data,
+        grid,
+        SORRENTO_SAMPLE["latitude"],
+        SORRENTO_SAMPLE["longitude"],
+    )
+    if sorrento_total is not None:
+        _draw_location_label(
+            ax,
+            f'{SORRENTO_SAMPLE["name"]}\n{sorrento_total:.2f}"',
+            SORRENTO_SAMPLE["latitude"],
+            SORRENTO_SAMPLE["longitude"],
+            offset=(8, 8),
             marker_size=36,
         )
     return True
