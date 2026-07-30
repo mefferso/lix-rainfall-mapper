@@ -47,7 +47,7 @@ streamlit run app.py
 - Statewide, combined, WFO LIX, metro, Ascension Parish, southwest Mississippi, and coastal map areas.
 - The official WFO LIX forecast-area outline on the WFO LIX preset.
 - A parish-focused Ascension view with its official boundary emphasized and outside-parish city labels suppressed.
-- Complete CoCoRaHS totals at Gonzales and Prairieville for August 12–14, 2016, shown with the Donaldsonville NOAA grid sample.
+- Three fixed rainfall observations at Gonzales and Prairieville on the Ascension Parish map.
 - Fixed rainfall color intervals for consistent event-to-event comparison.
 
 Planned additions include rolling maximum 24/48/72-hour totals, gauge overlays, parish/county summaries, and Atlas 14 exceedance comparisons.

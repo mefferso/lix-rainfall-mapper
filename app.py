@@ -150,8 +150,8 @@ with st.sidebar:
             value=False,
             help=(
                 "Adds the nearest rainfall-grid value beneath each displayed city name. "
-                "For Ascension Parish on August 12–14, 2016, the three complete "
-                "Gonzales/Prairieville CoCoRaHS totals are shown automatically instead."
+                "The Ascension Parish map always shows its three fixed rainfall "
+                "observations instead of city samples."
             ),
         )
         submitted = st.form_submit_button("Generate rainfall map", type="primary", use_container_width=True)

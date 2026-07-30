@@ -1,10 +1,14 @@
+from datetime import date
+from unittest.mock import Mock
+
 import numpy as np
 
 from rainfall.core import TargetGrid
 from rainfall.map import (
-    ASCENSION_EVENT_DATES,
-    ASCENSION_GAUGE_TOTALS,
+    ASCENSION_LABEL_OFFSETS,
+    ASCENSION_STATIONS,
     CITIES,
+    _draw_ascension_locations,
     _is_ascension_feature,
     _sample_grid,
 )
@@ -37,15 +41,42 @@ def test_local_city_reference_set_is_expanded():
         assert city in CITIES
 
 
-def test_ascension_event_uses_complete_cocorahs_totals():
-    assert tuple(str(day) for day in ASCENSION_EVENT_DATES) == (
-        "2016-08-12",
-        "2016-08-14",
-    )
-    assert [(row[0], row[3]) for row in ASCENSION_GAUGE_TOTALS] == [
+def test_ascension_uses_three_fixed_observations():
+    assert [(row[0], row[3]) for row in ASCENSION_STATIONS] == [
         ("Prairieville 2.0 S", 15.02),
         ("Gonzales 0.8 E", 11.41),
         ("Gonzales 4.5 S", 19.13),
+    ]
+    assert ASCENSION_LABEL_OFFSETS == {
+        "Prairieville 2.0 S": (8, 8),
+        "Gonzales 0.8 E": (8, 8),
+        "Gonzales 4.5 S": (-8, 8),
+    }
+
+
+def test_ascension_observations_ignore_grid_dates_and_city_options():
+    ax = Mock()
+    grid = TargetGrid(-91.14, 30.03, -90.60, 30.38, 2, 2, None)
+
+    _draw_ascension_locations(
+        ax,
+        np.array([[1.0, 2.0], [3.0, 4.0]]),
+        grid,
+        date(2025, 1, 1),
+        date(2025, 1, 31),
+        show_cities=False,
+        show_city_samples=True,
+    )
+
+    assert [call.args[:2] for call in ax.scatter.call_args_list] == [
+        (-90.979147, 30.276934),
+        (-90.909870, 30.217250),
+        (-90.928910, 30.151899),
+    ]
+    assert [call.args[0] for call in ax.annotate.call_args_list] == [
+        'Prairieville 2.0 S\n15.02"',
+        'Gonzales 0.8 E\n11.41"',
+        'Gonzales 4.5 S\n19.13"',
     ]
 
 
