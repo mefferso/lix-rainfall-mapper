@@ -1,7 +1,9 @@
 from datetime import date
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
+import matplotlib.pyplot as plt
 import numpy as np
+import pytest
 
 from rainfall.core import TargetGrid
 from rainfall.map import (
@@ -10,7 +12,9 @@ from rainfall.map import (
     CITIES,
     _draw_ascension_locations,
     _is_ascension_feature,
+    _rainfall_interpolation,
     _sample_grid,
+    render_map,
 )
 
 
@@ -90,3 +94,40 @@ def test_ascension_boundary_match_accepts_name_or_fips():
     assert not _is_ascension_feature(
         {"properties": {"layer": "county", "name": "Livingston"}}
     )
+
+
+def test_rainfall_display_modes_select_only_display_interpolation():
+    assert _rainfall_interpolation("Raw") == "nearest"
+    assert _rainfall_interpolation("Smooth") == "bilinear"
+
+
+def test_invalid_rainfall_display_mode_is_rejected():
+    with pytest.raises(ValueError, match="Rainfall display mode"):
+        _rainfall_interpolation("Blurred")
+
+
+def test_render_modes_leave_accumulated_grid_unchanged():
+    grid = TargetGrid(0, 0, 2, 2, 2, 2, None)
+    data = np.array([[0.1, 1.0], [4.0, np.nan]])
+    original = data.copy()
+    boundaries = {"features": []}
+
+    with patch("matplotlib.axes.Axes.imshow", autospec=True) as imshow:
+        # The remaining renderer expects an image-like colorbar input, so stop
+        # immediately after recording the actual rainfall imshow call.
+        imshow.side_effect = RuntimeError("captured")
+        for mode, expected in (("Raw", "nearest"), ("Smooth", "bilinear")):
+            with pytest.raises(RuntimeError, match="captured"):
+                render_map(
+                    data,
+                    grid,
+                    boundaries,
+                    date(2016, 8, 12),
+                    date(2016, 8, 14),
+                    rainfall_display_mode=mode,
+                )
+            assert imshow.call_args.kwargs["interpolation"] == expected
+
+    plt.close("all")
+
+    np.testing.assert_equal(data, original)
