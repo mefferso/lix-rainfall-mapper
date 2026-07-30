@@ -10,6 +10,7 @@ from rainfall.map import (
     ASCENSION_LABEL_OFFSETS,
     ASCENSION_STATIONS,
     CITIES,
+    SORRENTO_SAMPLE,
     _draw_ascension_locations,
     _is_ascension_feature,
     _rainfall_interpolation,
@@ -58,7 +59,7 @@ def test_ascension_uses_three_fixed_observations():
     }
 
 
-def test_ascension_observations_ignore_grid_dates_and_city_options():
+def test_ascension_has_three_fixed_observations_and_dynamic_sorrento_sample():
     ax = Mock()
     grid = TargetGrid(-91.14, 30.03, -90.60, 30.38, 2, 2, None)
 
@@ -72,16 +73,45 @@ def test_ascension_observations_ignore_grid_dates_and_city_options():
         show_city_samples=True,
     )
 
+    assert SORRENTO_SAMPLE == {
+        "name": "Sorrento",
+        "latitude": 30.18,
+        "longitude": -90.87,
+    }
     assert [call.args[:2] for call in ax.scatter.call_args_list] == [
         (-90.979147, 30.276934),
         (-90.909870, 30.217250),
         (-90.928910, 30.151899),
+        (-90.87, 30.18),
     ]
     assert [call.args[0] for call in ax.annotate.call_args_list] == [
         'Prairieville 2.0 S\n15.02"',
         'Gonzales 0.8 E\n11.41"',
         'Gonzales 4.5 S\n19.13"',
+        'Sorrento\n3.00"',
     ]
+
+
+def test_sorrento_changes_with_raw_grid_but_fixed_observations_do_not():
+    grid = TargetGrid(-91.14, 30.03, -90.60, 30.38, 2, 2, None)
+    labels_by_grid = []
+
+    for value in (4.25, 9.75):
+        ax = Mock()
+        _draw_ascension_locations(
+            ax,
+            np.array([[1.0, 2.0], [value, 3.0]]),
+            grid,
+            date(2025, 1, 1),
+            date(2025, 1, 31),
+            show_cities=True,
+            show_city_samples=True,
+        )
+        labels_by_grid.append([call.args[0] for call in ax.annotate.call_args_list])
+
+    assert labels_by_grid[0][:3] == labels_by_grid[1][:3]
+    assert labels_by_grid[0][3] == 'Sorrento\n4.25"'
+    assert labels_by_grid[1][3] == 'Sorrento\n9.75"'
 
 
 def test_ascension_boundary_match_accepts_name_or_fips():
