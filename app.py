@@ -23,7 +23,6 @@ from rainfall.core import (
     validate_date_range,
 )
 
-
 st.set_page_config(
     page_title="LIX Rainfall Mapper",
     page_icon="🌧️",
