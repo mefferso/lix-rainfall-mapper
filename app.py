@@ -22,6 +22,7 @@ from rainfall.core import (
     validate_date_range,
 )
 from rainfall.boundaries import fetch_la_ms_boundaries
+from rainfall.archive import ArchiveUnavailable, fetch_daily_geotiff
 from rainfall.ascension_patch import render_map
 
 
@@ -57,25 +58,12 @@ class ArchiveDownloadError(RuntimeError):
 
 
 @st.cache_data(show_spinner=False, ttl=3600, max_entries=100)
-def download_daily_raster(url: str) -> bytes:
-    """Download one NOAA raster with short retries and Streamlit caching."""
-
-    headers = {"User-Agent": "LIX-Rainfall-Mapper/1.0 (NOAA data visualization)"}
-    last_error: Exception | None = None
-    for attempt in range(3):
-        try:
-            response = requests.get(url, headers=headers, timeout=(15, 90))
-            if response.status_code == 404:
-                raise ArchiveDownloadError(f"NOAA has no daily file at {url}")
-            response.raise_for_status()
-            if len(response.content) < 1_000:
-                raise ArchiveDownloadError(f"NOAA returned an unexpectedly small file for {url}")
-            return response.content
-        except (requests.RequestException, ArchiveDownloadError) as exc:
-            last_error = exc
-            if attempt < 2:
-                time.sleep(1.25 * (attempt + 1))
-    raise ArchiveDownloadError(str(last_error))
+def download_daily_raster(product) -> bytes:
+    """Download a NOAA daily grid with documented format fallbacks."""
+    try:
+        return fetch_daily_geotiff(product)
+    except ArchiveUnavailable as exc:
+        raise ArchiveDownloadError(str(exc)) from exc
 
 
 @st.cache_data(show_spinner=False, ttl=604800, max_entries=1)
@@ -88,7 +76,7 @@ def download_period(products, progress_bar, status_box) -> list[bytes]:
     failures: list[str] = []
     workers = min(8, len(products))
     with ThreadPoolExecutor(max_workers=workers) as executor:
-        futures = {executor.submit(download_daily_raster, product.url): product for product in products}
+        futures = {executor.submit(download_daily_raster, product): product for product in products}
         for completed, future in enumerate(as_completed(futures), start=1):
             product = futures[future]
             try:
