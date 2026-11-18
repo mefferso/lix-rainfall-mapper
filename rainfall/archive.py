@@ -5,17 +5,17 @@ Never substitute a different precipitation analysis or an unverified unit.
 """
 from __future__ import annotations
 
+import tarfile
+import time
 from datetime import date
 from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
-import tarfile
-import time
 
 import numpy as np
 import rasterio
-from rasterio.io import MemoryFile
 import requests
+from rasterio.io import MemoryFile
 
 from rainfall.core import ArchiveSource, DailyProduct
 
