@@ -11,6 +11,7 @@ from datetime import date
 from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from threading import Lock
 
 import numpy as np
 import rasterio
@@ -18,6 +19,9 @@ import requests
 from rasterio.io import MemoryFile
 
 from rainfall.core import ArchiveSource, DailyProduct
+
+
+_GRIB_READ_LOCK = Lock()  # GDAL GRIB decoder is not thread-safe.
 
 
 class ArchiveUnavailable(RuntimeError):
@@ -64,7 +68,8 @@ def _get(session: requests.Session, url: str) -> bytes:
 def _unit_factor(units: str, *, format_name: str) -> float:
     """Convert known units to inches; reject ambiguity instead of corrupting totals."""
     unit = (units.strip().lower().replace(" ", "").replace("_", "")
-            .replace("(", "").replace(")", ""))
+            .replace("(", "").replace(")", "")
+            .replace("[", "").replace("]", ""))
     if unit in {"in", "inch", "inches"}:
         return 1.0
     if unit in {"mm", "millimeter", "millimeters", "kgm-2", "kg/m^2", "kg/m2",
@@ -105,12 +110,20 @@ def _convert_raster(data: bytes, suffix: str, *, format_name: str) -> bytes:
                     band for band in range(1, ds.count + 1)
                     if ds.tags(band).get("GRIB_ELEMENT", "").upper() in {"APCP", "TP"}
                 ]
-                if len(matches) != 1:
+                if len(matches) == 1:
+                    band = matches[0]
+                elif len(matches) == 0 and ds.count == 1:
+                    # The exact date-matched CONUS 24h Stage IV file inside
+                    # NOAA's QPE source TAR can omit GRIB_ELEMENT metadata.
+                    # Units are still verified below before conversion.
+                    band = 1
+                else:
+                    elements = [ds.tags(i).get("GRIB_ELEMENT", "missing")
+                                for i in range(1, ds.count + 1)]
                     raise ArchiveUnavailable(
-                        f"GRIB2: expected exactly one accumulated-precipitation band, "
-                        f"found {len(matches)}"
+                        "GRIB2: cannot uniquely select accumulated precipitation; "
+                        f"band count={ds.count}, elements={elements}"
                     )
-                band = matches[0]
             else:
                 if ds.count != 1:
                     raise ArchiveUnavailable(
@@ -173,7 +186,9 @@ def _from_tar(data: bytes, expected_date: date) -> bytes:
         handle = archive.extractfile(member)
         if handle is None:
             raise ArchiveUnavailable("Cannot read CONUS GRIB2 in TAR")
-        return _convert_raster(handle.read(), ".grb2", format_name="GRIB2")
+        # Multiple days download concurrently, but GDAL GRIB reads must be serialized.
+        with _GRIB_READ_LOCK:
+            return _convert_raster(handle.read(), ".grb2", format_name="GRIB2")
 
 
 def fetch_daily_geotiff(product: DailyProduct, session: requests.Session | None = None) -> bytes:
