@@ -102,13 +102,13 @@ def test_source_tar_rejects_wrong_date():
         _from_tar(stream.getvalue(), date(2020, 11, 27))
 
 
-def test_stage_iv_st4_naming_in_source_tar(monkeypatch):
+def test_stage_iv_historical_conus_24h_naming_in_source_tar(monkeypatch):
     from rainfall import archive
 
     blob = b"GRIB" * 500
     stream = BytesIO()
     with tarfile.open(fileobj=stream, mode="w") as tar:
-        for name in ("ak_20201127_24.grb2", "ST4.2020112712.24h.grb2"):
+        for name in ("ak_20201127_24h.grb2", "conus_20201127_24h.grb2"):
             info = tarfile.TarInfo(name)
             info.size = len(blob)
             tar.addfile(info, BytesIO(blob))
