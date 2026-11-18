@@ -4,10 +4,15 @@ import tarfile
 from datetime import date
 from io import BytesIO
 
+import numpy as np
 import pytest
+import rasterio
+from rasterio.io import MemoryFile
+from rasterio.transform import from_origin
 
 from rainfall.archive import (
     ArchiveUnavailable,
+    _convert_raster,
     _from_tar,
     _unit_factor,
     candidate_urls,
@@ -128,3 +133,40 @@ def test_unknown_archive_members_reported():
         tar.addfile(info, BytesIO(blob))
     with pytest.raises(ArchiveUnavailable, match="unexpected_grid_20201127.grb2"):
         _from_tar(stream.getvalue(), date(2020, 11, 27))
+
+
+def _one_band_raster(*, units="kg/(m^2)", count=1):
+    with MemoryFile() as mem:
+        with mem.open(
+            driver="GTiff", width=4, height=4, count=count,
+            dtype="float32", crs="EPSG:4326",
+            transform=from_origin(-91, 31, 0.01, 0.01),
+        ) as dst:
+            for band in range(1, count + 1):
+                dst.write(np.full((4, 4), 25.4, dtype="float32"), band)
+                dst.update_tags(band, GRIB_UNIT=f"[{units}]")
+        return mem.read()
+
+
+def test_stage_iv_single_band_missing_grib_element_still_converts_inches():
+    payload = _convert_raster(
+        _one_band_raster(), ".grb2", format_name="GRIB2"
+    )
+    with MemoryFile(payload) as mem, mem.open() as ds:
+        assert ds.count == 1
+        assert np.allclose(ds.read(1), 1.0)
+        assert ds.tags().get("units") == "inches"
+
+
+def test_stage_iv_multiband_missing_grib_element_fails():
+    with pytest.raises(ArchiveUnavailable, match="cannot uniquely select"):
+        _convert_raster(
+            _one_band_raster(count=2), ".grb2", format_name="GRIB2"
+        )
+
+
+def test_grib_ambiguous_units_are_rejected():
+    with pytest.raises(ArchiveUnavailable, match="not recognized"):
+        _convert_raster(
+            _one_band_raster(units="unknown"), ".grb2", format_name="GRIB2"
+        )
