@@ -8,6 +8,9 @@ from inspect import signature
 
 import streamlit as st
 
+from rainfall.archive import ArchiveUnavailable, fetch_daily_geotiff
+from rainfall.ascension_patch import render_map
+from rainfall.boundaries import fetch_la_ms_boundaries
 from rainfall.core import (
     REGIONS,
     DateRangeError,
@@ -19,9 +22,6 @@ from rainfall.core import (
     source_for_date,
     validate_date_range,
 )
-from rainfall.boundaries import fetch_la_ms_boundaries
-from rainfall.archive import ArchiveUnavailable, fetch_daily_geotiff
-from rainfall.ascension_patch import render_map
 
 
 st.set_page_config(
@@ -79,7 +79,7 @@ def download_period(products, progress_bar, status_box) -> list[bytes]:
             product = futures[future]
             try:
                 results[product.valid_date] = future.result()
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 - report unexpected archive/render failures
                 failures.append(f"{product.valid_date:%Y-%m-%d}: {exc}")
             progress_bar.progress(completed / len(products))
             status_box.caption(f"Downloaded {completed} of {len(products)} daily grids…")
@@ -215,7 +215,7 @@ if submitted:
         status_box.empty()
     except (DateRangeError, ArchiveDownloadError, ValueError) as exc:
         st.error(str(exc))
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001 - report unexpected archive/render failures
         st.exception(exc)
 
 if "result" in st.session_state:
