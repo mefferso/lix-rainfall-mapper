@@ -147,17 +147,23 @@ def _convert_raster(data: bytes, suffix: str, *, format_name: str) -> bytes:
 def _from_tar(data: bytes, expected_date: date) -> bytes:
     stamp = expected_date.strftime("%Y%m%d")
     with tarfile.open(fileobj=BytesIO(data), mode="r:*") as archive:
+        # NOAA's source TARs span more than one naming convention.
+        # The ST4 timestamp marks the 12Z END of the 24-hour QPE window.
+        accepted = {
+            f"conus_{stamp}_24.grb2",
+            f"conun_{stamp}_24.grb2",
+            f"st4.{stamp}12.24h.grb2",
+        }
+        contents = [member for member in archive.getmembers() if member.isfile()]
         members = [
-            member for member in archive.getmembers()
-            if member.isfile()
-            and Path(member.name).name.lower() in {
-                f"conus_{stamp}_24.grb2", f"conun_{stamp}_24.grb2"
-            }
+            member for member in contents
+            if Path(member.name).name.lower() in accepted
         ]
         if len(members) != 1:
+            seen = ", ".join(Path(member.name).name for member in contents[:15])
             raise ArchiveUnavailable(
-                f"Source TAR does not contain exactly one CONUS 24-hour GRIB2 "
-                f"for {stamp}"
+                f"Source TAR has {len(members)} matching CONUS 24-hour GRIB2 "
+                f"members for {stamp}; archive members: {seen or '(empty)'}"
             )
         member = members[0]
         if member.size > 250_000_000:
