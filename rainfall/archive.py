@@ -63,7 +63,8 @@ def _get(session: requests.Session, url: str) -> bytes:
 
 def _unit_factor(units: str, *, format_name: str) -> float:
     """Convert known units to inches; reject ambiguity instead of corrupting totals."""
-    unit = units.strip().lower().replace(" ", "").replace("_", "")
+    unit = (units.strip().lower().replace(" ", "").replace("_", "")
+            .replace("(", "").replace(")", ""))
     if unit in {"in", "inch", "inches"}:
         return 1.0
     if unit in {"mm", "millimeter", "millimeters", "kgm-2", "kg/m^2", "kg/m2",
