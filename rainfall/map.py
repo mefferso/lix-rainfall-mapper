@@ -13,7 +13,6 @@ from matplotlib.colors import BoundaryNorm, ListedColormap
 
 from .core import TargetGrid
 
-
 RAIN_LEVELS = [0.01, 0.25, 0.50, 1, 2, 3, 4, 6, 8, 10, 12, 15, 20, 25, 30]
 RAIN_COLORS = [
     "#eee4bf",
