@@ -20,7 +20,6 @@ from rasterio.io import MemoryFile
 
 from rainfall.core import ArchiveSource, DailyProduct
 
-
 _GRIB_READ_LOCK = Lock()  # GDAL GRIB decoder is not thread-safe.
 
 
