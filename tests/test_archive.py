@@ -1,7 +1,8 @@
 """Offline tests for NOAA Stage IV archive fallback selection."""
+
+import tarfile
 from datetime import date
 from io import BytesIO
-import tarfile
 
 import pytest
 
