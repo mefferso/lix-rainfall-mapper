@@ -152,6 +152,8 @@ def _from_tar(data: bytes, expected_date: date) -> bytes:
         accepted = {
             f"conus_{stamp}_24.grb2",
             f"conun_{stamp}_24.grb2",
+            f"conus_{stamp}_24h.grb2",
+            f"conun_{stamp}_24h.grb2",
             f"st4.{stamp}12.24h.grb2",
         }
         contents = [member for member in archive.getmembers() if member.isfile()]
