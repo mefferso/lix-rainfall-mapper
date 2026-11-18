@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import date, timedelta
 from enum import Enum
-from typing import Callable, Sequence
 
 import numpy as np
 from rasterio.io import MemoryFile
@@ -119,8 +119,8 @@ def build_target_grid(region_name: str, resolution: float = 0.025) -> TargetGrid
     """Build a fixed latitude/longitude output grid for a named region."""
 
     west, south, east, north = REGIONS[region_name]
-    width = int(round((east - west) / resolution))
-    height = int(round((north - south) / resolution))
+    width = round((east - west) / resolution)
+    height = round((north - south) / resolution)
     transform = from_bounds(west, south, east, north, width, height)
     return TargetGrid(west, south, east, north, width, height, transform)
 
@@ -151,26 +151,25 @@ def accumulate_rasters(
     valid_anywhere = np.zeros_like(total, dtype=bool)
 
     for index, payload in enumerate(raster_bytes, start=1):
-        with MemoryFile(payload) as memory_file:
-            with memory_file.open() as dataset:
-                source = _clean_source_array(dataset)
-                daily = np.full_like(total, np.nan)
-                # Older Stage III GeoTIFFs use a custom spherical geographic
-                # CRS. Their coordinates are already longitude/latitude, but
-                # PROJ cannot always derive a WGS84 datum transformation.
-                destination_crs = dataset.crs if dataset.crs.is_geographic else grid.crs
-                reproject(
-                    source=source,
-                    destination=daily,
-                    src_transform=dataset.transform,
-                    src_crs=dataset.crs,
-                    src_nodata=np.nan,
-                    dst_transform=grid.transform,
-                    dst_crs=destination_crs,
-                    dst_nodata=np.nan,
-                    resampling=Resampling.bilinear,
-                    init_dest_nodata=True,
-                )
+        with MemoryFile(payload) as memory_file, memory_file.open() as dataset:
+            source = _clean_source_array(dataset)
+            daily = np.full_like(total, np.nan)
+            # Older Stage III GeoTIFFs use a custom spherical geographic
+            # CRS. Their coordinates are already longitude/latitude, but
+            # PROJ cannot always derive a WGS84 datum transformation.
+            destination_crs = dataset.crs if dataset.crs.is_geographic else grid.crs
+            reproject(
+                source=source,
+                destination=daily,
+                src_transform=dataset.transform,
+                src_crs=dataset.crs,
+                src_nodata=np.nan,
+                dst_transform=grid.transform,
+                dst_crs=destination_crs,
+                dst_nodata=np.nan,
+                resampling=Resampling.bilinear,
+                init_dest_nodata=True,
+            )
 
         valid = np.isfinite(daily)
         total[valid] += daily[valid]
