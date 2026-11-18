@@ -5,9 +5,7 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date
 from inspect import signature
-import time
 
-import requests
 import streamlit as st
 
 from rainfall.core import (
