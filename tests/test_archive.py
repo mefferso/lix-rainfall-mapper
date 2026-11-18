@@ -100,3 +100,31 @@ def test_source_tar_rejects_wrong_date():
         tar.addfile(info, BytesIO(blob))
     with pytest.raises(ArchiveUnavailable, match="exactly one CONUS"):
         _from_tar(stream.getvalue(), date(2020, 11, 27))
+
+
+def test_stage_iv_st4_naming_in_source_tar(monkeypatch):
+    from rainfall import archive
+
+    blob = b"GRIB" * 500
+    stream = BytesIO()
+    with tarfile.open(fileobj=stream, mode="w") as tar:
+        for name in ("ak_20201127_24.grb2", "ST4.2020112712.24h.grb2"):
+            info = tarfile.TarInfo(name)
+            info.size = len(blob)
+            tar.addfile(info, BytesIO(blob))
+    monkeypatch.setattr(
+        archive, "_convert_raster",
+        lambda data, suffix, *, format_name: b"processed" if data == blob else b"bad",
+    )
+    assert _from_tar(stream.getvalue(), date(2020, 11, 27)) == b"processed"
+
+
+def test_unknown_archive_members_reported():
+    stream = BytesIO()
+    with tarfile.open(fileobj=stream, mode="w") as tar:
+        blob = b"GRIB" * 500
+        info = tarfile.TarInfo("unexpected_grid_20201127.grb2")
+        info.size = len(blob)
+        tar.addfile(info, BytesIO(blob))
+    with pytest.raises(ArchiveUnavailable, match="unexpected_grid_20201127.grb2"):
+        _from_tar(stream.getvalue(), date(2020, 11, 27))
