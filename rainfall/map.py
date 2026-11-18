@@ -453,12 +453,7 @@ def render_map(
             weight="semibold",
             color="#111111",
             zorder=10,
-            bbox=dict(
-                boxstyle="round,pad=0.35",
-                facecolor="white",
-                edgecolor="#111111",
-                alpha=0.9,
-            ),
+            bbox={"boxstyle": "round,pad=0.35", "facecolor": "white", "edgecolor": "#111111", "alpha": 0.9},
         )
     elif region_name == "Ascension Parish":
         note = "Ascension Parish boundary"
@@ -501,7 +496,7 @@ def render_map(
         fontsize=8,
         weight="bold",
         color="#17212b",
-        arrowprops=dict(arrowstyle="-|>", lw=1.5, color="#17212b"),
+        arrowprops={"arrowstyle": "-|>", "lw": 1.5, "color": "#17212b"},
         zorder=9,
     )
     _add_scale_bar(ax, grid)
