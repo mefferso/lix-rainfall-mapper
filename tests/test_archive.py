@@ -98,7 +98,7 @@ def test_source_tar_rejects_wrong_date():
         info = tarfile.TarInfo("conun_20201126_24.grb2")
         info.size = len(blob)
         tar.addfile(info, BytesIO(blob))
-    with pytest.raises(ArchiveUnavailable, match="exactly one CONUS"):
+    with pytest.raises(ArchiveUnavailable, match="0 matching CONUS"):
         _from_tar(stream.getvalue(), date(2020, 11, 27))
 
 
